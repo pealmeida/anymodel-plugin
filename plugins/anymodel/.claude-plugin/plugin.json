@@ -1,0 +1,8 @@
+{
+  "name": "anymodel",
+  "version": "0.1.0",
+  "description": "Delegate tasks and reviews from Claude Code to any provider and model.",
+  "author": {
+    "name": "Pedro Almeida"
+  }
+}
