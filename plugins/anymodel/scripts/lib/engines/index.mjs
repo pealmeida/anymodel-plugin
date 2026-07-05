@@ -161,7 +161,8 @@ export async function dispatchTurn(input) {
       model: options.model ? String(options.model) : null,
       effort: options.effort ? String(options.effort) : null,
       sandbox: options.write ? "workspace-write" : "read-only",
-      resumeThreadRef: options.resume ? String(options.resume) : null
+      resumeThreadRef: options.resume ? String(options.resume) : null,
+      bridge: options.bridge ? String(options.bridge) : null
     },
     onEvent
   );
@@ -208,7 +209,10 @@ async function runReviewCommand({ command, cwd, options, prompt, engineId, engin
     if (!nativeTarget) {
       return { ok: false, command, status: "error", message: `Unsupported review target: ${target.label}` };
     }
-    const result = await engine.startReview({ cwd, nativeTarget, model }, onEvent);
+    const result = await engine.startReview(
+      { cwd, nativeTarget, model, bridge: options.bridge ? String(options.bridge) : null },
+      onEvent
+    );
     return {
       ok: result.status === "completed",
       command,
@@ -231,7 +235,14 @@ async function runReviewCommand({ command, cwd, options, prompt, engineId, engin
   });
 
   const result = await engine.startTurn(
-    { cwd, prompt: reviewPrompt, model, sandbox: "read-only", outputSchema },
+    {
+      cwd,
+      prompt: reviewPrompt,
+      model,
+      sandbox: "read-only",
+      outputSchema,
+      bridge: options.bridge ? String(options.bridge) : null
+    },
     onEvent
   );
   const parsed = parseReviewOutput(result.finalMessage, {

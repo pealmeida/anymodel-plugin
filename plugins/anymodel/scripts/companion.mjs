@@ -27,7 +27,8 @@ const COMMANDS = new Set([
   "result",
   "cancel",
   "models",
-  "setup"
+  "setup",
+  "shim"
 ]);
 
 const TURN_VALUE_OPTIONS = [
@@ -36,6 +37,8 @@ const TURN_VALUE_OPTIONS = [
   "provider",
   "effort",
   "base",
+  "scope",
+  "bridge",
   "resume",
   "cwd"
 ];
@@ -341,6 +344,30 @@ ${payload.message}
 `);
 }
 
+async function handleShim(argv) {
+  const parsed = parseCommandArgs(argv, {
+    valueOptions: ["port", "host", "env-file"],
+    booleanOptions: []
+  });
+  if (parsed.options.help) {
+    writeStdout("Usage: companion.mjs shim [--port 4001] [--host 127.0.0.1] [--env-file <path>]\n");
+    return;
+  }
+  const env = { ...process.env };
+  if (parsed.options["env-file"]) {
+    const text = fs.readFileSync(parsed.options["env-file"], "utf8");
+    for (const line of text.split(/\r?\n/)) {
+      const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+      if (m && m[2] !== "") env[m[1]] = m[2];
+    }
+  }
+  const { startShimServer } = await import("./lib/providers/shim-server.mjs");
+  const port = parsed.options.port ? Number.parseInt(parsed.options.port, 10) : 4001;
+  const host = parsed.options.host ?? "127.0.0.1";
+  startShimServer({ port, host, env, log: (msg) => process.stderr.write(`[shim] ${msg}\n`) });
+  process.stderr.write(`[shim] listening on http://${host}:${port}/v1\n`);
+}
+
 async function main(argv = process.argv.slice(2)) {
   const [command, ...rest] = argv;
 
@@ -355,6 +382,11 @@ async function main(argv = process.argv.slice(2)) {
 
   if (command === "delegate" || command === "review" || command === "adversarial-review") {
     await handleTurnCommand(command, rest);
+    return;
+  }
+
+  if (command === "shim") {
+    await handleShim(rest);
     return;
   }
 

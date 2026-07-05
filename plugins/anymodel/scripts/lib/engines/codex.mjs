@@ -23,7 +23,16 @@ import {
 } from "../core/codex.mjs";
 import { isBridgeModel } from "../providers/registry.mjs";
 
-const BRIDGE_PROVIDER_ID = "litellm";
+// Bridge provider ids must exist as [model_providers.<id>] in the user-level
+// codex config: "litellm" (external proxy, port 4000) or "anymodel" (built-in
+// shim, `companion.mjs shim`, port 4001).
+const BRIDGE_PROVIDERS = { litellm: "litellm", builtin: "anymodel" };
+const DEFAULT_BRIDGE = process.env.ANYMODEL_BRIDGE === "builtin" ? "builtin" : "litellm";
+
+function bridgeProviderId(req) {
+  const key = req.bridge && BRIDGE_PROVIDERS[req.bridge] ? req.bridge : DEFAULT_BRIDGE;
+  return BRIDGE_PROVIDERS[key];
+}
 
 function buildTurnOptions(req) {
   const model = req.model?.trim() || null;
@@ -39,7 +48,7 @@ function buildTurnOptions(req) {
     disableBroker: Boolean(req.disableBroker)
   };
   if (model && isBridgeModel(model)) {
-    options.configOverride = { model_provider: BRIDGE_PROVIDER_ID, model };
+    options.configOverride = { model_provider: bridgeProviderId(req), model };
   }
   return options;
 }
@@ -101,7 +110,7 @@ const codexEngine = {
       onProgress: onEvent ?? null
     };
     if (model && isBridgeModel(model)) {
-      options.configOverride = { model_provider: BRIDGE_PROVIDER_ID, model };
+      options.configOverride = { model_provider: bridgeProviderId(req), model };
     }
     const result = await runAppServerReview(req.cwd, options);
     return {

@@ -32,7 +32,7 @@ _TODO: installation, setup, and first-delegate steps once Phase 0 scaffolding is
 |-------|--------|------|
 | Phase 0 | ✅ Done | Scaffold repo; lift core orchestration; codex adapter + LiteLLM bridge; provider registry; loopback CI test |
 | Phase 1 | ✅ Done | Codex + Claude adapters; per-thread config override (mixed providers on one broker); native + schema reviews on all engines |
-| Phase 2 | Planned | Built-in Responses→Chat shim; quirk pipeline; replay-fixture regression suite |
+| Phase 2 | ✅ Done | Built-in Responses→Chat shim (`companion.mjs shim`, `--bridge builtin`); quirk pipeline; unit test suite |
 | Phase 3 | Planned | Gemini / OpenCode adapters; stop-gate across engines; marketplace publish |
 
 ## Attribution
