@@ -18,6 +18,7 @@ import {
   getCodexAvailability,
   getCodexAuthStatus,
   interruptAppServerTurn,
+  runAppServerReview,
   runAppServerTurn
 } from "../core/codex.mjs";
 import { isBridgeModel } from "../providers/registry.mjs";
@@ -85,6 +86,35 @@ const codexEngine = {
       onProgress: onEvent ?? null
     });
     return toTurnResult(result);
+  },
+
+  /**
+   * Native built-in reviewer (review/start). `nativeTarget` is the codex
+   * ReviewTarget ({type:"uncommittedChanges"} | {type:"baseBranch",branch}).
+   * Bridge models work here too via the per-thread config override.
+   */
+  async startReview(req, onEvent) {
+    const model = req.model?.trim() || null;
+    const options = {
+      target: req.nativeTarget,
+      model,
+      onProgress: onEvent ?? null
+    };
+    if (model && isBridgeModel(model)) {
+      options.configOverride = { model_provider: BRIDGE_PROVIDER_ID, model };
+    }
+    const result = await runAppServerReview(req.cwd, options);
+    return {
+      status: result.status === 0 ? "completed" : "failed",
+      exitStatus: result.status,
+      finalMessage: result.reviewText ?? "",
+      reasoningSummary: result.reasoningSummary ?? [],
+      touchedFiles: [],
+      threadRef: result.threadId ?? null,
+      turnRef: result.turnId ?? null,
+      stderr: result.stderr ?? "",
+      raw: result
+    };
   },
 
   async resumeTurn(threadRef, req, onEvent) {

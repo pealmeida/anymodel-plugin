@@ -1022,7 +1022,8 @@ export async function runAppServerReview(cwd, options = {}) {
       model: options.model,
       sandbox: "read-only",
       ephemeral: true,
-      threadName: options.threadName
+      threadName: options.threadName,
+      configOverride: options.configOverride
     });
     const sourceThreadId = thread.thread.id;
     emitProgress(options.onProgress, `Thread ready (${sourceThreadId}).`, "starting", {

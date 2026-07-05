@@ -128,15 +128,16 @@ export function engineIds() {
 export async function dispatchTurn(input) {
   const { command, cwd, options = {}, prompt = "" } = input;
 
-  if (command !== "delegate") {
+  const KNOWN = new Set(["delegate", "review", "adversarial-review"]);
+  if (!KNOWN.has(command)) {
     return {
       ok: false,
       command,
       status: "not_implemented",
-      message: `${command} is not wired to engines yet (Phase 1 covers delegate).`
+      message: `${command} is not wired to engines yet.`
     };
   }
-  if (!prompt.trim()) {
+  if (command === "delegate" && !prompt.trim()) {
     return { ok: false, command, status: "error", message: "A prompt is required for delegate." };
   }
 
@@ -148,6 +149,10 @@ export async function dispatchTurn(input) {
     const message = typeof update === "string" ? update : update?.message;
     if (message) process.stderr.write(`[${engineId}] ${message}\n`);
   };
+
+  if (command === "review" || command === "adversarial-review") {
+    return runReviewCommand({ command, cwd, options, prompt, engineId, engine, onEvent });
+  }
 
   const result = await engine.startTurn(
     {
@@ -170,5 +175,80 @@ export async function dispatchTurn(input) {
     finalMessage: result.finalMessage,
     threadRef: result.threadRef,
     touchedFiles: result.touchedFiles
+  };
+}
+
+/**
+ * Review dispatch (ARCHITECTURE.md §5):
+ * - `review` + engine with nativeReview and no focus text -> built-in reviewer.
+ * - everything else -> portable schema review (adversarial template + JSON
+ *   schema, read-only sandbox). Focus text only applies to adversarial-review.
+ */
+async function runReviewCommand({ command, cwd, options, prompt, engineId, engine, onEvent }) {
+  const { buildSchemaReview, parseReviewOutput, resolveTarget, toNativeReviewTarget } = await import(
+    "../review.mjs"
+  );
+
+  const focusText = command === "adversarial-review" ? prompt.trim() : "";
+  if (command === "review" && prompt.trim()) {
+    return {
+      ok: false,
+      command,
+      status: "error",
+      message: "`review` does not take focus text; use adversarial-review for steerable reviews."
+    };
+  }
+
+  const target = resolveTarget(cwd, { base: options.base, scope: options.scope });
+  const model = options.model ? String(options.model) : null;
+  const capabilities = engine.capabilities?.() ?? {};
+
+  if (command === "review" && capabilities.nativeReview && typeof engine.startReview === "function") {
+    const nativeTarget = toNativeReviewTarget(target);
+    if (!nativeTarget) {
+      return { ok: false, command, status: "error", message: `Unsupported review target: ${target.label}` };
+    }
+    const result = await engine.startReview({ cwd, nativeTarget, model }, onEvent);
+    return {
+      ok: result.status === "completed",
+      command,
+      engine: engineId,
+      model,
+      status: result.status,
+      targetLabel: target.label,
+      review: result.finalMessage,
+      threadRef: result.threadRef
+    };
+  }
+
+  // Portable schema review. Engines without native outputSchema support get the
+  // schema contract inlined into the prompt.
+  const inlineSchema = engineId !== "codex";
+  const { prompt: reviewPrompt, outputSchema } = buildSchemaReview(cwd, target, {
+    focusText,
+    reviewKind: command === "review" ? "Review" : "Adversarial Review",
+    inlineSchema
+  });
+
+  const result = await engine.startTurn(
+    { cwd, prompt: reviewPrompt, model, sandbox: "read-only", outputSchema },
+    onEvent
+  );
+  const parsed = parseReviewOutput(result.finalMessage, {
+    status: result.exitStatus,
+    failureMessage: result.stderr
+  });
+
+  return {
+    ok: result.status === "completed",
+    command,
+    engine: engineId,
+    model,
+    status: result.status,
+    targetLabel: target.label,
+    review: parsed.parsed ?? null,
+    parseError: parsed.parseError ?? null,
+    rawOutput: parsed.parsed ? null : parsed.rawOutput,
+    threadRef: result.threadRef
   };
 }
