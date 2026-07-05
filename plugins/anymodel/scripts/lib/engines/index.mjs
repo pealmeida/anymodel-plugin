@@ -115,3 +115,60 @@ export function listEngines() {
 export function engineIds() {
   return ENGINE_IDS;
 }
+
+/**
+ * Dispatch a turn command from the companion CLI to an engine adapter.
+ *
+ * Engine selection: explicit `--engine`, else "codex" (the only engine that can
+ * route registry-prefixed bridge models). Sandbox: `--write` maps to
+ * workspace-write, default read-only. Progress events stream to stderr.
+ *
+ * @param {{ command: string, cwd: string, options: object, prompt: string }} input
+ */
+export async function dispatchTurn(input) {
+  const { command, cwd, options = {}, prompt = "" } = input;
+
+  if (command !== "delegate") {
+    return {
+      ok: false,
+      command,
+      status: "not_implemented",
+      message: `${command} is not wired to engines yet (Phase 1 covers delegate).`
+    };
+  }
+  if (!prompt.trim()) {
+    return { ok: false, command, status: "error", message: "A prompt is required for delegate." };
+  }
+
+  const engineId = options.engine ? String(options.engine) : "codex";
+  const module = await getEngine(engineId);
+  const engine = module.default ?? module;
+
+  const onEvent = (update) => {
+    const message = typeof update === "string" ? update : update?.message;
+    if (message) process.stderr.write(`[${engineId}] ${message}\n`);
+  };
+
+  const result = await engine.startTurn(
+    {
+      cwd,
+      prompt,
+      model: options.model ? String(options.model) : null,
+      effort: options.effort ? String(options.effort) : null,
+      sandbox: options.write ? "workspace-write" : "read-only",
+      resumeThreadRef: options.resume ? String(options.resume) : null
+    },
+    onEvent
+  );
+
+  return {
+    ok: result.status === "completed",
+    command,
+    engine: engineId,
+    model: options.model ?? null,
+    status: result.status,
+    finalMessage: result.finalMessage,
+    threadRef: result.threadRef,
+    touchedFiles: result.touchedFiles
+  };
+}
