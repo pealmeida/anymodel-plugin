@@ -1,0 +1,17 @@
+{
+  "name": "anymodel-plugin",
+  "version": "0.3.0",
+  "description": "Delegate tasks and reviews from any AI agent to any provider and model.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.18"
+  },
+  "bin": {
+    "anymodel": "plugins/anymodel/scripts/companion.mjs",
+    "anymodel-mcp": "plugins/anymodel/scripts/mcp-server.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/shim.test.mjs"
+  }
+}
