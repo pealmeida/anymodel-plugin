@@ -198,7 +198,7 @@ aliases, review-gate toggle, bridge mode.
 ## 9. Repo layout
 
 ```
-any-model-plugin/
+anymodel-plugin/
 ├── .claude-plugin/marketplace.json
 ├── LICENSE  NOTICE                      # Apache-2.0, attribution to OpenAI codex-plugin-cc
 ├── plugins/anymodel/
