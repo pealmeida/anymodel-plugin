@@ -46,3 +46,23 @@ _TODO: installation, setup, and first-delegate steps once Phase 0 scaffolding is
 ## Attribution
 
 This project derives from [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) under the Apache-2.0 license. See `LICENSE` and `NOTICE` for details.
+
+## Security
+
+- **API keys are never stored in this repository.** Providers are configured with
+  `env_key` references in `registry.toml`; keys come from your environment or a
+  local env file you pass to `companion.mjs shim --env-file` (keep it outside the
+  repo — `.env` files are gitignored).
+- **Sandboxing varies by engine.** The `codex` engine runs inside Codex's own
+  sandbox; the `claude` engine uses Claude Code permission modes; the built-in
+  `direct` engine has only tool-level guards (workspace path containment,
+  symlink-hardened; `write_file`/`exec_command` exist only in `--write` mode).
+  Don't point `--engine direct --write` at repositories you can't afford to
+  mutate, and treat model output as untrusted input.
+- The bridge (shim or LiteLLM) listens on `127.0.0.1` only.
+- Found a vulnerability? Please open a private security advisory rather than a
+  public issue.
+
+## License
+
+Apache-2.0 — see `LICENSE` and `NOTICE`.

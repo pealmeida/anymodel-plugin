@@ -1,4 +1,11 @@
-Copyright 2026 OpenAI
+Any Model Plugin
+Copyright 2026 Pedro Almeida
+
+This product includes software derived from the Codex plugin for Claude Code
+(https://github.com/openai/codex-plugin-cc), Copyright 2026 OpenAI, licensed
+under the Apache License, Version 2.0. The orchestration core under
+plugins/anymodel/scripts/lib/core/ began as a fork of that project's
+plugins/codex/scripts/lib/ and has been modified.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

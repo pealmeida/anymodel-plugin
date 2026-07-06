@@ -1,0 +1,9 @@
+# Local state & secrets
+.env
+*.env
+*.log
+node_modules/
+.anymodel/
+
+# OS noise
+.DS_Store

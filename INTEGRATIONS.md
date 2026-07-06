@@ -70,7 +70,7 @@ commands (`delegate`, `review`, `adversarial-review`, `models`, `setup`, `status
 `cancel`) with subagent routing and resume prompts:
 
 ```bash
-claude plugin marketplace add /home/pedro/anymodel-plugin
+claude plugin marketplace add /path/to/anymodel-plugin
 claude plugin install anymodel@any-model
 ```
 
