@@ -319,6 +319,15 @@ async function handleModelsOrSetup(command, argv) {
     return;
   }
 
+  if (command === "models") {
+    await handleModels(parsed);
+    return;
+  }
+  if (command === "setup") {
+    await handleSetupCommand(parsed);
+    return;
+  }
+
   const registry = await loadEngineRegistry();
   const payload = {
     ok: false,
@@ -366,6 +375,91 @@ async function handleShim(argv) {
   const host = parsed.options.host ?? "127.0.0.1";
   startShimServer({ port, host, env, log: (msg) => process.stderr.write(`[shim] ${msg}\n`) });
   process.stderr.write(`[shim] listening on http://${host}:${port}/v1\n`);
+}
+
+
+async function handleModels(parsed) {
+  const { loadRegistry } = await import("./lib/providers/registry.mjs");
+  const { probeAllProviders } = await import("./lib/providers/probe.mjs");
+  const registry = loadRegistry();
+  let results = await probeAllProviders(registry, process.env);
+  if (parsed.options.provider) {
+    results = results.filter((r) => r.providerId === parsed.options.provider);
+  }
+  if (parsed.options.json) {
+    printJson({ ok: true, command: "models", providers: results });
+    return;
+  }
+  const lines = ["# AnyModel Providers", ""];
+  for (const r of results) {
+    lines.push(`## ${r.providerId} ${r.ok ? "✓" : "✗"}${r.keyPresent ? "" : " (no API key set)"}`);
+    if (r.ok) {
+      lines.push(r.models.join(", "));
+    } else if (r.error) {
+      lines.push(`error: ${r.error}`);
+    }
+    lines.push("");
+  }
+  writeStdout(lines.join("\n"));
+}
+
+async function handleSetupCommand(parsed) {
+  const registryModule = await loadEngineRegistry();
+  const engines = [];
+  for (const { id, available } of registryModule.listEngines()) {
+    if (!available) {
+      engines.push({ id, available: false, detail: "adapter not implemented" });
+      continue;
+    }
+    try {
+      const module = await registryModule.getEngine(id);
+      const engine = module.default ?? module;
+      const detect = await engine.detect(cwdFromOptions(parsed.options));
+      const auth = detect.available ? await engine.auth(cwdFromOptions(parsed.options)) : null;
+      engines.push({ id, available: detect.available, detail: detect.detail, auth });
+    } catch (error) {
+      engines.push({ id, available: false, detail: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  const os = await import("node:os");
+  const path = await import("node:path");
+  let codexConfig = "";
+  try {
+    codexConfig = fs.readFileSync(
+      path.join(process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex"), "config.toml"),
+      "utf8"
+    );
+  } catch {
+    codexConfig = "";
+  }
+  const bridgeProvidersConfigured = {
+    litellm: /\[model_providers\.litellm\]/.test(codexConfig),
+    anymodel: /\[model_providers\.anymodel\]/.test(codexConfig)
+  };
+
+  let bridges = { litellm: false, builtin: false };
+  try {
+    const { checkBridgeHealth } = await import("./lib/providers/probe.mjs");
+    bridges = await checkBridgeHealth(process.env);
+  } catch {
+    // probe module missing: leave both false
+  }
+
+  const payload = { ok: true, command: "setup", engines, bridgeProvidersConfigured, bridges };
+  if (parsed.options.json) {
+    printJson(payload);
+    return;
+  }
+  const lines = ["# AnyModel Setup", "", "Engines:"];
+  for (const e of engines) {
+    lines.push(`- ${e.id}: ${e.available ? "available" : "unavailable"} (${e.detail ?? ""})${e.auth ? ` — ${e.auth.detail}` : ""}`);
+  }
+  lines.push("", "Bridge providers in codex config:");
+  lines.push(`- litellm: ${bridgeProvidersConfigured.litellm ? "configured" : "MISSING"} (proxy ${bridges.litellm ? "up" : "down"})`);
+  lines.push(`- anymodel: ${bridgeProvidersConfigured.anymodel ? "configured" : "MISSING"} (shim ${bridges.builtin ? "up" : "down"})`);
+  lines.push("");
+  writeStdout(lines.join("\n"));
 }
 
 async function main(argv = process.argv.slice(2)) {
