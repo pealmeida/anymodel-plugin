@@ -8,6 +8,14 @@ A Claude Code plugin that lets AI agents **delegate tasks**, run **adversarial r
 - **Run adversarial reviews** across different models and providers.
 - **Manage background jobs** (`status`, `result`, `cancel`) just like the upstream plugin.
 
+## Use it from any agent host
+
+Claude Code is one of three surfaces — the same CLI powers all of them:
+
+- **Universal CLI**: `node plugins/anymodel/scripts/companion.mjs <command>` (or `npx anymodel`) from any shell or agent.
+- **MCP server**: `plugins/anymodel/scripts/mcp-server.mjs` exposes every capability as `anymodel_*` tools in any MCP host — Claude Code, Codex, Cursor, Windsurf, VS Code. See [INTEGRATIONS.md](INTEGRATIONS.md).
+- **Claude Code native plugin**: `/anymodel:*` commands via the marketplace install below.
+
 ## The two-axes concept
 
 Delegation is built on two orthogonal ideas:
