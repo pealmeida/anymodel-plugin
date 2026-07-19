@@ -31,8 +31,8 @@ CI, n8n/Zapier, or any custom agent loop.
 ## 2. MCP server (any MCP-capable host)
 
 The server lives at `plugins/anymodel/scripts/mcp-server.mjs` — **stdio** transport, exposing
-the surface as `anymodel_*` tools (`anymodel_delegate`, `anymodel_review`, `anymodel_models`,
-`anymodel_status`, `anymodel_result`, `anymodel_cancel`, …). Every host uses the same config
+the surface as tools (`delegate`, `review`, `adversarial_review`, `models`, `status`, `result`,
+`cancel`, `setup`). Every host uses the same config
 shape; only the file location and (sometimes) the top-level key differ:
 
 ```json
@@ -61,13 +61,14 @@ Per-host locations and notes:
 - **VS Code** — `.vscode/mcp.json` in the workspace (same shape).
 
 Always use absolute paths — hosts resolve `command` from their own working directory. After
-registration the `anymodel_*` tools appear alongside the host's native tool set.
+registration the tools appear alongside the host's native tool set.
 
 ## 3. Claude Code native plugin
 
 For the richest experience, install as a first-class plugin to get the `/anymodel:*` slash
-commands (`delegate`, `review`, `adversarial-review`, `models`, `setup`, `status`, `result`,
-`cancel`) with subagent routing and resume prompts:
+commands (`choose`, `delegate-with`, `review-with`, `delegate`, `review`,
+`adversarial-review`, `models`, `setup`, `status`, `result`, `cancel`) with subagent routing,
+guided model selection, and resume prompts:
 
 ```bash
 claude plugin marketplace add /path/to/anymodel-plugin
@@ -77,6 +78,9 @@ claude plugin install anymodel@any-model
 Then from any session:
 
 ```
+/anymodel:choose delegate with zai fix the flaky test
+/anymodel:delegate-with ollama --write implement the parser guard
+/anymodel:review-with opencode-go --base main challenge the architecture
 /anymodel:delegate --engine codex --model zai/glm-5.2 --write fix the flaky test
 /anymodel:review   --engine claude --base main
 /anymodel:setup
@@ -89,7 +93,7 @@ MCP paths exactly.
 
 - **Node.js 18+** — companion CLI and MCP server are pure ESM, no npm install step.
 - **Provider API keys** — set in env (`ZAI_API_KEY`, `OLLAMA_API_KEY`, `OPENCODE_API_KEY`, …)
-  or load from a file via `companion.mjs shim --env-file ~/.anymodel.env`. Keys never appear in
+  or load from a file via the `ANYMODEL_ENV_FILE` environment variable (or `companion.mjs shim --env-file ~/.anymodel.env`). Keys never appear in
   argv or job-state files.
 - **codex CLI** — only needed for the `codex` engine (`codex app-server`); install with
   `npm install -g @openai/codex`.

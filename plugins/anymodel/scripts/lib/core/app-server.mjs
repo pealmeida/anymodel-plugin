@@ -24,8 +24,8 @@ export const BROKER_BUSY_RPC_CODE = -32001;
 
 /** @type {ClientInfo} */
 const DEFAULT_CLIENT_INFO = {
-  title: "Codex Plugin",
-  name: "Claude Code",
+  title: "AnyModel Plugin",
+  name: "AnyModel",
   version: PLUGIN_MANIFEST.version ?? "0.0.0"
 };
 
@@ -85,7 +85,7 @@ class AppServerClientBase {
    */
   request(method, params) {
     if (this.closed) {
-      throw new Error("codex app-server client is closed.");
+      throw new Error("engine app-server client is closed.");
     }
 
     const id = this.nextId;

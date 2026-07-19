@@ -10,6 +10,7 @@
  */
 
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 import fs from "node:fs";
 
@@ -35,7 +36,7 @@ const moduleCache = new Map();
  * @returns {string} Absolute filesystem path to the adapter `.mjs`.
  */
 function modulePathFor(id) {
-  return path.join(path.dirname(new URL(import.meta.url).pathname), ENGINE_MODULES[id]);
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), ENGINE_MODULES[id]);
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
  * Engine adapter interface.
  *
- * Each provider harness (Codex, Claude, a built-in "direct" loop, …) implements this so the
+ * Each provider harness (codex, claude, a built-in "direct" loop, …) implements this so the
  * orchestration layer (`lib/core`) can drive any executor against any model.
  *
  * Derived from ARCHITECTURE.md section 3 (the `TurnCaptureState` normalization in upstream

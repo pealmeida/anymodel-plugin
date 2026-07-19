@@ -22,8 +22,8 @@ jobs:
           for f in $(git ls-files '*.mjs'); do
             node --check "$f"
           done
-      - name: Unit tests
-        run: node --test tests/shim.test.mjs
+      - name: Unit and integration tests
+        run: node --test tests/*.test.mjs
       - name: MCP protocol smoke test
         run: |
           printf '%s\n%s\n%s\n' \
@@ -40,6 +40,9 @@ jobs:
                 const tools = lines.find((m) => m.id === 2);
                 if (!init?.result?.serverInfo) throw new Error("initialize failed");
                 if ((tools?.result?.tools ?? []).length !== 8) throw new Error("expected 8 tools");
-                console.log("MCP smoke OK:", tools.result.tools.length, "tools");
+                const names = tools.result.tools.map(t => t.name).sort();
+                const expected = ["adversarial_review","cancel","delegate","models","result","review","setup","status"];
+                if (JSON.stringify(names) !== JSON.stringify(expected)) throw new Error("unexpected tool names: " + names.join(", "));
+                console.log("MCP smoke OK:", names.length, "tools:", names.join(", "));
               });
             '

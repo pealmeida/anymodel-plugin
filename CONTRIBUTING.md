@@ -26,7 +26,7 @@ Everything lives under `plugins/anymodel/`:
   `engine.d.ts` is the **contract** and source of truth for the interface.
 - `lib/providers/` — `registry.toml` (provider defs), `quirks.mjs` (the quirk-normalizing
   pipeline), and the built-in **Responses→Chat shim**.
-- `scripts/mcp-server.mjs` — exposes capabilities as `anymodel_*` MCP tools for non-Claude
+- `scripts/mcp-server.mjs` — exposes capabilities as MCP tools for non-Claude
   hosts (Codex, Cursor, Windsurf, VS Code).
 - `commands/` and `agents/` — the **Claude Code surface**: thin forwarder commands and runner
   subagents. The subagent makes exactly one Bash call to the CLI and returns stdout verbatim.
@@ -45,7 +45,7 @@ Everything lives under `plugins/anymodel/`:
    node plugins/anymodel/scripts/companion.mjs delegate --engine direct --model <id>/<model> "hello"
    ```
 
-4. New quirks need a replay fixture under the debug harness for regression coverage.
+4. New quirks need a replay fixture for regression coverage (planned: `companion debug replay` harness).
 
 ## Adding an engine
 
@@ -79,7 +79,7 @@ Everything lives under `plugins/anymodel/`:
   node plugins/anymodel/scripts/companion.mjs delegate --engine direct --model <id>/<model> "ping"
   ```
 
-- The **replay harness** (`companion debug replay`) captures outbound payloads to bisect
+- The **replay harness** (planned: `companion debug replay`) will capture outbound payloads to bisect
   quirks; record a fixture when you fix a new one.
 
 ## Pull requests

@@ -84,7 +84,15 @@ function normalizeRenderedOutput(output) {
     .replaceAll("Codex jobs", "AnyModel jobs")
     .replaceAll("Codex did not", "Engine did not")
     .replaceAll("Codex Result", "AnyModel Result")
-    .replaceAll("codex resume", "engine resume");
+    .replaceAll("codex resume", "engine resume")
+    .replaceAll("Codex Setup", "AnyModel Setup")
+    .replaceAll("Codex error:", "Engine error:")
+    .replaceAll("Codex CLI", "engine CLI")
+    .replaceAll("Codex app-server", "engine app-server")
+    .replaceAll("Codex version", "engine version")
+    .replaceAll("Codex reported", "Engine reported")
+    .replaceAll("Codex review", "AnyModel review")
+    .replaceAll("Codex adversarial", "AnyModel adversarial");
 }
 
 function writeStdout(value) {
@@ -93,6 +101,47 @@ function writeStdout(value) {
 
 function printJson(value) {
   writeStdout(JSON.stringify(value, null, 2));
+}
+
+function unquoteEnvValue(value) {
+  const trimmed = String(value ?? "").trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function loadEnvFile(filePath) {
+  if (!filePath) return;
+
+  let text = "";
+  try {
+    text = fs.readFileSync(filePath, "utf8");
+  } catch (error) {
+    process.stderr.write(`[anymodel] could not read ANYMODEL_ENV_FILE ${filePath}: ${error.message}\n`);
+    return;
+  }
+
+  let loaded = 0;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+
+    const [, key, rawValue] = match;
+    if (process.env[key] === undefined) {
+      process.env[key] = unquoteEnvValue(rawValue);
+      loaded += 1;
+    }
+  }
+
+  if (loaded > 0) {
+    process.stderr.write(`[anymodel] loaded ${loaded} env value(s) from ANYMODEL_ENV_FILE\n`);
+  }
 }
 
 function parseCommandArgs(argv, config) {
@@ -463,6 +512,8 @@ async function handleSetupCommand(parsed) {
 }
 
 async function main(argv = process.argv.slice(2)) {
+  loadEnvFile(process.env.ANYMODEL_ENV_FILE);
+
   const [command, ...rest] = argv;
 
   if (!command || command === "--help" || command === "-h") {

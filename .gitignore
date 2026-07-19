@@ -5,5 +5,22 @@
 node_modules/
 .anymodel/
 
+# Development process
+.context/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # OS noise
 .DS_Store
+Thumbs.db
+
+# Build / coverage
+dist/
+build/
+coverage/
+.nyc_output/

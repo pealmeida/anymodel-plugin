@@ -3,11 +3,11 @@
  *
  * Drives the local `codex app-server` (vendored client in ../core/codex.mjs).
  * Model routing:
- *   - engine-native model (or none)  -> default provider from the user's codex config
+ *   - engine-native model (or none)  -> default provider from the user's engine config
  *   - registry-prefixed model (zai/…, ollama/…, opencode-go/…, mock/…, self/…)
- *     -> per-thread config override { model_provider: "litellm", model } through the
- *        local bridge proxy. Requires [model_providers.litellm] in the user-level
- *        ~/.codex/config.toml (verified by `setup`). This avoids CODEX_HOME env
+ *     -> per-thread config override { model_provider: "anymodel", model } through the
+ *        built-in bridge proxy. Requires [model_providers.anymodel] in the user-level
+ *        engine config (verified by `setup`). This avoids CODEX_HOME env
  *        switching entirely, so a shared broker can serve mixed-provider turns.
  *
  * The config override is unofficial app-server API (verified on codex-cli 0.142.x);
@@ -24,10 +24,10 @@ import {
 import { isBridgeModel } from "../providers/registry.mjs";
 
 // Bridge provider ids must exist as [model_providers.<id>] in the user-level
-// codex config: "litellm" (external proxy, port 4000) or "anymodel" (built-in
-// shim, `companion.mjs shim`, port 4001).
+// codex config: "anymodel" (built-in shim, `companion.mjs shim`, port 4001).
+// "litellm" remains an explicit optional bridge for users who run that proxy.
 const BRIDGE_PROVIDERS = { litellm: "litellm", builtin: "anymodel" };
-const DEFAULT_BRIDGE = process.env.ANYMODEL_BRIDGE === "builtin" ? "builtin" : "litellm";
+const DEFAULT_BRIDGE = process.env.ANYMODEL_BRIDGE === "litellm" ? "litellm" : "builtin";
 
 function bridgeProviderId(req) {
   const key = req.bridge && BRIDGE_PROVIDERS[req.bridge] ? req.bridge : DEFAULT_BRIDGE;

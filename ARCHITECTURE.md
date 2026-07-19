@@ -121,18 +121,11 @@ Lesson learned: subscription plans live on **different endpoints** than metered 
 (Z.AI coding/paas/v4, OpenCode zen/go/v1). The registry must model endpoint-per-plan,
 and `setup` should probe `/models` on each configured endpoint to verify key↔plan pairing.
 
-### Wire bridging: own the Responses→Chat shim (recommendation)
+### Wire bridging: built-in Responses→Chat shim
 
-Today we bridge with a LiteLLM proxy + `openai/chat_completions/*` prefix. It works, but we
-had to patch LiteLLM site-packages **three times** (empty-`choices` chunks; assistant
-content-lists/empty messages; tool-result adjacency) plus a pre-call tool-type sanitizer.
-Those patches die on every `pip install --upgrade`.
-
-**Phase 2 goal: replace the Python proxy with a small Node shim inside the plugin** —
-`/v1/responses` in, provider chat-completions out — implementing the quirk pipeline natively.
-We already hold the complete event-mapping spec (captured SSE sequences: `response.created` →
-`output_item.added` → `output_text.delta`/`function_call` → `response.completed`). Benefits:
-no Python dependency, no upgrade-fragile patches, quirks become first-class config.
+The built-in Node shim (`shim.mjs` + `shim-server.mjs`) translates the engine's Responses API
+to provider chat-completions and back, implementing the quirk pipeline natively. No Python
+dependency, no upgrade-fragile patches — quirks are first-class config in `registry.toml`.
 LiteLLM stays supported as an *optional* backend (spend tracking, fallbacks, 100+ providers)
 via `bridge = "litellm" | "builtin"`.
 
@@ -153,6 +146,9 @@ Default-on where harmless; all covered by replay tests (below).
 
 | Command | Notes |
 |---|---|
+| `/anymodel:choose` | interactive semantic chain: choose delegate vs adversarial review, then provider/model, then dispatch |
+| `/anymodel:delegate-with` | delegation-first semantic chain that probes providers/models before forwarding to `delegate` |
+| `/anymodel:review-with` | adversarial-review semantic chain that probes providers/models before forwarding to `adversarial-review` |
 | `/anymodel:delegate` | upstream `rescue` renamed; `--engine`, `--model`, `--effort`, `--write`, `--background/--wait`, `--resume/--fresh` |
 | `/anymodel:review` | native reviewer when engine supports it, else schema-review; `--base <ref>` |
 | `/anymodel:adversarial-review` | portable prompt-template + JSON-schema review, read-only sandbox — works on every engine |
@@ -186,12 +182,11 @@ aliases, review-gate toggle, bridge mode.
 
 ## 8. Testing strategy
 
-- **Fake-engine fixture** (upstream has `fake-codex-fixture.mjs` — generalize per adapter).
+- **Fake-engine fixture** (planned: generalize upstream's `fake-codex-fixture.mjs` per adapter).
 - **Loopback provider**: the `self/echo` mock trick — proxy pointing at itself exercises the
   full wire path with zero keys; keep as `mock/echo` route + CI default.
-- **Payload replay harness**: the technique that cracked Kimi — capture outbound payloads,
-  replay curl variants, bisect fields. Ship as a dev tool (`companion debug replay`), with
-  recorded fixtures for each quirk as regression tests.
+- **Payload replay harness** (planned: `companion debug replay`): capture outbound payloads,
+  replay curl variants, bisect fields. Recorded fixtures for each quirk as regression tests.
 - **Live matrix** (opt-in, keys required): the write-and-verify-readback agentic smoke test we
   used, per provider × model, in CI cron.
 
@@ -203,27 +198,29 @@ anymodel-plugin/
 ├── LICENSE  NOTICE                      # Apache-2.0, attribution to OpenAI codex-plugin-cc
 ├── plugins/anymodel/
 │   ├── .claude-plugin/plugin.json
-│   ├── commands/  agents/  skills/  hooks/  prompts/  schemas/
+│   ├── commands/  agents/  prompts/  schemas/
 │   └── scripts/
 │       ├── companion.mjs                # CLI entry (subcommand router)
+│       ├── mcp-server.mjs               # MCP JSON-RPC server
 │       └── lib/
 │           ├── core/                    # lifted upstream: args, state, jobs, git, render…
-│           ├── engines/                 # engine.d.ts + codex.mjs, claude.mjs, direct.mjs…
-│           ├── providers/               # registry.mjs, quirks.mjs, bridge-builtin.mjs, bridge-litellm.mjs
-│           └── debug/                   # capture + replay harness
+│           ├── engines/                 # engine.d.ts + codex.mjs, claude.mjs, direct.mjs
+│           ├── providers/               # registry.mjs, quirks.mjs, shim.mjs, shim-server.mjs
+│           └── review.mjs               # review orchestration
 └── tests/
 ```
 
 ## 10. Phased roadmap
 
-- **Phase 0 (prove the repo)**: scaffold; lift `lib/core`; codex adapter with CODEX_HOME
-  switching + LiteLLM bridge management (current working state, productized); provider
+- **Phase 0 (Done)**: scaffold; lift `lib/core`; codex adapter with CODEX_HOME
+  switching + LiteLLM bridge management; provider
   registry seeded with zai / ollama / opencode-go; `/anymodel:models`; loopback CI test.
-- **Phase 1**: claude adapter (headless stream-json); schema-review on non-codex engines;
+- **Phase 1 (Done)**: claude adapter (headless stream-json); schema-review on non-codex engines;
   `thread/start` config-override fast path with feature detection.
-- **Phase 2**: built-in Node Responses→Chat shim + quirk pipeline; drop the mandatory Python
+- **Phase 2 (Done)**: built-in Node Responses→Chat shim + quirk pipeline; drop the mandatory Python
   dependency; replay-fixture regression suite.
-- **Phase 3**: gemini/opencode adapters; stop-gate across engines; marketplace publish.
+- **Phase 3 (Done)**: plugin command surface + runner agent; `models`/`setup`; `direct` engine; local marketplace install.
+- **Phase 4 (In progress)**: semantic `/anymodel:*` chains for guided provider/model selection before delegation or adversarial review.
 
 ## 11. Risks
 

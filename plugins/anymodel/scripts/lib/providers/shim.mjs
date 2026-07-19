@@ -1,13 +1,13 @@
 /**
  * Responses→Chat translation core (Phase 2, ARCHITECTURE.md §4).
  *
- * Codex speaks the OpenAI Responses API (`wire_api = "responses"`). Most
+ * The engine speaks the OpenAI Responses API (`wire_api = "responses"`). Most
  * providers speak chat-completions. This module converts:
  *   - a Responses API request  -> a chat-completions request (per provider,
  *     with the quirk pipeline applied), and
  *   - a chat-completions SSE stream -> Responses API SSE events.
  *
- * The event sequence mirrors what Codex accepts (captured from live traffic):
+ * The event sequence mirrors what the engine accepts (captured from live traffic):
  *   response.created -> response.in_progress
  *   -> [message]      output_item.added -> content_part.added
  *                     -> output_text.delta* -> content_part.done -> output_item.done

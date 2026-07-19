@@ -16,7 +16,7 @@ const COMPANION_PATH = path.resolve(__dirname, "companion.mjs");
 
 const TOOLS = [
   {
-    name: "anymodel_delegate",
+    name: "delegate",
     description: "Delegate a task to an engine and return the result.",
     inputSchema: {
       type: "object",
@@ -32,7 +32,7 @@ const TOOLS = [
     }
   },
   {
-    name: "anymodel_review",
+    name: "review",
     description: "Run a code review over the current workspace.",
     inputSchema: {
       type: "object",
@@ -47,7 +47,7 @@ const TOOLS = [
     }
   },
   {
-    name: "anymodel_adversarial_review",
+    name: "adversarial_review",
     description: "Run a portable adversarial review focused on a specific concern.",
     inputSchema: {
       type: "object",
@@ -63,7 +63,7 @@ const TOOLS = [
     }
   },
   {
-    name: "anymodel_status",
+    name: "status",
     description: "Show active and recent AnyModel jobs.",
     inputSchema: {
       type: "object",
@@ -75,7 +75,7 @@ const TOOLS = [
     }
   },
   {
-    name: "anymodel_result",
+    name: "result",
     description: "Show the result of a finished AnyModel job.",
     inputSchema: {
       type: "object",
@@ -87,7 +87,7 @@ const TOOLS = [
     }
   },
   {
-    name: "anymodel_cancel",
+    name: "cancel",
     description: "Cancel an active AnyModel job.",
     inputSchema: {
       type: "object",
@@ -99,7 +99,7 @@ const TOOLS = [
     }
   },
   {
-    name: "anymodel_models",
+    name: "models",
     description: "Probe configured model providers for available models.",
     inputSchema: {
       type: "object",
@@ -110,7 +110,7 @@ const TOOLS = [
     }
   },
   {
-    name: "anymodel_setup",
+    name: "setup",
     description: "Check local engine and provider setup.",
     inputSchema: {
       type: "object",
@@ -121,14 +121,14 @@ const TOOLS = [
 ];
 
 const TOOL_MAP = {
-  anymodel_delegate: { command: "delegate", positionalKey: "prompt" },
-  anymodel_review: { command: "review", positionalKey: null },
-  anymodel_adversarial_review: { command: "adversarial-review", positionalKey: "focus" },
-  anymodel_status: { command: "status", positionalKey: "jobId" },
-  anymodel_result: { command: "result", positionalKey: "jobId" },
-  anymodel_cancel: { command: "cancel", positionalKey: "jobId" },
-  anymodel_models: { command: "models", positionalKey: null },
-  anymodel_setup: { command: "setup", positionalKey: null }
+  delegate: { command: "delegate", positionalKey: "prompt" },
+  review: { command: "review", positionalKey: null },
+  adversarial_review: { command: "adversarial-review", positionalKey: "focus" },
+  status: { command: "status", positionalKey: "jobId" },
+  result: { command: "result", positionalKey: "jobId" },
+  cancel: { command: "cancel", positionalKey: "jobId" },
+  models: { command: "models", positionalKey: null },
+  setup: { command: "setup", positionalKey: null }
 };
 
 let messageId = 0;
@@ -154,6 +154,44 @@ function sendResult(id, result) {
 
 function log(...args) {
   process.stderr.write(args.join(" ") + "\n");
+}
+
+function unquoteEnvValue(value) {
+  const trimmed = String(value ?? "").trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function loadEnvFile(filePath) {
+  if (!filePath) return;
+
+  let text = "";
+  try {
+    text = readFileSync(filePath, "utf8");
+  } catch (error) {
+    log(`[mcp-server] could not read ANYMODEL_ENV_FILE ${filePath}:`, error.message);
+    return;
+  }
+
+  let loaded = 0;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+
+    const [, key, rawValue] = match;
+    if (process.env[key] === undefined) {
+      process.env[key] = unquoteEnvValue(rawValue);
+      loaded += 1;
+    }
+  }
+  log(`[mcp-server] loaded ${loaded} env value(s) from ANYMODEL_ENV_FILE`);
 }
 
 async function handleInitialize(request) {
@@ -290,6 +328,8 @@ function handleLine(line) {
 }
 
 function main() {
+  loadEnvFile(process.env.ANYMODEL_ENV_FILE);
+
   let buffer = "";
 
   process.stdin.setEncoding("utf8");

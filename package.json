@@ -1,9 +1,22 @@
 {
   "name": "anymodel-plugin",
   "version": "0.3.0",
-  "description": "Delegate tasks and reviews from any AI agent to any provider and model.",
+  "description": "Delegate tasks and reviews from any AI agent to any provider and model — CLI, MCP server, and Claude Code plugin.",
   "type": "module",
   "license": "Apache-2.0",
+  "author": "Pedro Almeida",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "mcp",
+    "ai",
+    "delegation",
+    "code-review",
+    "multi-model",
+    "codex",
+    "llm",
+    "agent"
+  ],
   "engines": {
     "node": ">=18.18"
   },
@@ -11,11 +24,23 @@
     "anymodel": "plugins/anymodel/scripts/companion.mjs",
     "anymodel-mcp": "plugins/anymodel/scripts/mcp-server.mjs"
   },
+  "files": [
+    "plugins/",
+    "scripts/",
+    "tests/",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
   "scripts": {
-    "test": "node --test tests/shim.test.mjs"
+    "test": "node --test tests/*.test.mjs"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pealmeida/anymodel-plugin.git"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/pealmeida/anymodel-plugin/issues"
+  },
+  "homepage": "https://github.com/pealmeida/anymodel-plugin#readme"
 }

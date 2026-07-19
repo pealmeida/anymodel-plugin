@@ -44,8 +44,8 @@ import { BROKER_BUSY_RPC_CODE, BROKER_ENDPOINT_ENV, CodexAppServerClient } from 
 import { loadBrokerSession } from "./broker-lifecycle.mjs";
 import { binaryAvailable } from "./process.mjs";
 
-const SERVICE_NAME = "claude_code_codex_plugin";
-const TASK_THREAD_PREFIX = "Codex Companion Task";
+const SERVICE_NAME = "anymodel_plugin";
+const TASK_THREAD_PREFIX = "AnyModel Task";
 const DEFAULT_CONTINUE_PROMPT =
   "Continue from the current thread state. Pick the next highest-value step and follow through until the task is resolved.";
 const EXTERNAL_AGENT_IMPORT_COMPLETED = "externalAgentConfig/import/completed";
@@ -547,7 +547,7 @@ function applyTurnNotification(state, message) {
       break;
     case "error":
       state.error = message.params.error;
-      emitProgress(state.onProgress, `Codex error: ${message.params.error.message}`, "failed");
+      emitProgress(state.onProgress, `Engine error: ${message.params.error.message}`, "failed");
       break;
     case "turn/completed":
       if ((message.params.threadId ?? null) !== state.threadId) {
@@ -728,7 +728,7 @@ async function requestExternalAgentSessionImport(client, params) {
     previousHandler?.(message);
   });
   timeout = setTimeout(() => {
-    rejectCompleted(new Error("Timed out waiting for Codex to finish importing the Claude session."));
+    rejectCompleted(new Error("Timed out waiting for the engine to finish importing the Claude session."));
   }, EXTERNAL_AGENT_IMPORT_TIMEOUT_MS);
 
   try {
@@ -920,7 +920,7 @@ export function getSessionRuntimeStatus(env = process.env, cwd = process.cwd()) 
     return {
       mode: "shared",
       label: "shared session",
-      detail: "This Claude session is configured to reuse one shared Codex runtime.",
+      detail: "This session is configured to reuse one shared engine runtime.",
       endpoint
     };
   }
@@ -928,7 +928,7 @@ export function getSessionRuntimeStatus(env = process.env, cwd = process.cwd()) 
   return {
     mode: "direct",
     label: "direct startup",
-    detail: "No shared Codex runtime is active yet. The first review or task command will start one on demand.",
+    detail: "No shared engine runtime is active yet. The first review or task command will start one on demand.",
     endpoint: null
   };
 }
@@ -1013,11 +1013,11 @@ export async function interruptAppServerTurn(cwd, { threadId, turnId }) {
 export async function runAppServerReview(cwd, options = {}) {
   const availability = getCodexAvailability(cwd);
   if (!availability.available) {
-    throw new Error("Codex CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/codex:setup`.");
+    throw new Error("Engine CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/anymodel:setup`.");
   }
 
   return withAppServer(cwd, async (client) => {
-    emitProgress(options.onProgress, "Starting Codex review thread.", "starting");
+    emitProgress(options.onProgress, "Starting review thread.", "starting");
     const thread = await startThread(client, cwd, {
       model: options.model,
       sandbox: "read-only",
@@ -1070,20 +1070,20 @@ export async function runAppServerReview(cwd, options = {}) {
 export async function importExternalAgentSession(cwd, options = {}) {
   const availability = getCodexAvailability(cwd);
   if (!availability.available) {
-    throw new Error("Codex CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/codex:setup`.");
+    throw new Error("Engine CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/anymodel:setup`.");
   }
   if (!options.sourcePath) {
     throw new Error("A Claude session source path is required.");
   }
 
   return withDirectAppServer(cwd, async (client) => {
-    emitProgress(options.onProgress, "Importing Claude session into Codex.", "transferring");
+    emitProgress(options.onProgress, "Importing Claude session into engine.", "transferring");
     try {
       await requestExternalAgentSessionImport(client, externalAgentSessionMigration(options.sourcePath, cwd));
     } catch (error) {
       if (error?.rpcCode === -32601) {
         throw new Error(
-          "This Codex version does not support Claude session transfer. Update Codex with `npm install -g @openai/codex@latest`, then retry.",
+          "This engine version does not support Claude session transfer. Update the engine with `npm install -g @openai/codex@latest`, then retry.",
           { cause: error }
         );
       }
@@ -1093,7 +1093,7 @@ export async function importExternalAgentSession(cwd, options = {}) {
     if (!threadId) {
       const stderr = cleanCodexStderr(client.stderr);
       throw new Error(
-        `Codex reported that the Claude import completed, but did not record an imported thread.${stderr ? `\n${stderr}` : " Check the Codex app-server logs for the underlying import error."}`
+        `Engine reported that the Claude import completed, but did not record an imported thread.${stderr ? `\n${stderr}` : " Check the engine app-server logs for the underlying import error."}`
       );
     }
     emitProgress(options.onProgress, `Claude session imported (${threadId}).`, "completed", { threadId });
@@ -1107,7 +1107,7 @@ export async function importExternalAgentSession(cwd, options = {}) {
 export async function runAppServerTurn(cwd, options = {}) {
   const availability = getCodexAvailability(cwd);
   if (!availability.available) {
-    throw new Error("Codex CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/codex:setup`.");
+    throw new Error("Engine CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/anymodel:setup`.");
   }
 
   const runner = options.disableBroker ? withDirectAppServer : withAppServer;
@@ -1124,7 +1124,7 @@ export async function runAppServerTurn(cwd, options = {}) {
       });
       threadId = response.thread.id;
     } else {
-      emitProgress(options.onProgress, "Starting Codex task thread.", "starting");
+      emitProgress(options.onProgress, "Starting task thread.", "starting");
       const response = await startThread(client, cwd, {
         model: options.model,
         sandbox: options.sandbox,
@@ -1141,7 +1141,7 @@ export async function runAppServerTurn(cwd, options = {}) {
 
     const prompt = options.prompt?.trim() || options.defaultPrompt || "";
     if (!prompt) {
-      throw new Error("A prompt is required for this Codex run.");
+      throw new Error("A prompt is required for this engine run.");
     }
 
     const turnState = await captureTurn(
@@ -1177,7 +1177,7 @@ export async function runAppServerTurn(cwd, options = {}) {
 export async function findLatestTaskThread(cwd) {
   const availability = getCodexAvailability(cwd);
   if (!availability.available) {
-    throw new Error("Codex CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/codex:setup`.");
+    throw new Error("Engine CLI is not installed or is missing required runtime support. Install it with `npm install -g @openai/codex`, then rerun `/anymodel:setup`.");
   }
 
   return withAppServer(cwd, async (client) => {
@@ -1204,7 +1204,7 @@ export function parseStructuredOutput(rawOutput, fallback = {}) {
   if (!rawOutput) {
     return {
       parsed: null,
-      parseError: fallback.failureMessage ?? "Codex did not return a final structured message.",
+      parseError: fallback.failureMessage ?? "Engine did not return a final structured message.",
       rawOutput: rawOutput ?? "",
       ...fallback
     };
