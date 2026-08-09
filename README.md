@@ -10,8 +10,11 @@
     <a href="https://pealmeida.github.io/anymodel-plugin/"><img src="https://img.shields.io/badge/site-project%20page-00E5FF" alt="Project site"></a>
     <a href="https://github.com/pealmeida/anymodel-plugin/releases"><img src="https://img.shields.io/badge/version-0.3.1-8A2BE2" alt="Version"></a>
   </p>
-  <img src="docs/assets/demo.gif" alt="Terminal demo: setup, models, delegate, adversarial review, status, MCP" width="910">
 </div>
+
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="Terminal demo: setup, models, delegate, adversarial review, status, MCP" width="910">
+</p>
 
 Any Model Plugin separates the _executor harness_ (the agent runtime that plans, runs commands, and edits files) from the _model_ (the provider the harness thinks with). Pick the best engine for the job and the best model for the task — independently.
 
