@@ -26,3 +26,4 @@ dist/
 build/
 coverage/
 .nyc_output/
+demos/output/
