@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Any Model Plugin — any agent, any provider, any model</title>
+<meta name="description" content="Delegate tasks and run adversarial reviews from any AI agent to any provider and model. Claude Code plugin, universal CLI, and MCP server — zero dependencies.">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --obsidian: #0A0A0A;
+    --graphite: #1A1A1A;
+    --graphite-2: #141414;
+    --border: #2A2A2A;
+    --cyan: #00E5FF;
+    --purple: #8A2BE2;
+    --warning: #FFAB00;
+    --success: #00C853;
+    --text: #EDEDED;
+    --dim: #9A9A9A;
+    --faint: #6B6B6B;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--obsidian);
+    color: var(--text);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .brand { font-family: "Space Grotesk", "Inter", sans-serif; }
+  code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav { display: flex; align-items: center; gap: 16px; height: 64px; }
+  .nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); }
+  .nav .brand:hover { text-decoration: none; }
+  .nav .brand img { width: 30px; height: 30px; }
+  .nav .links { margin-left: auto; display: flex; align-items: center; gap: 22px; font-size: 14px; }
+  .nav .links a { color: var(--dim); }
+  .nav .links a:hover { color: var(--cyan); text-decoration: none; }
+  .health { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--faint); }
+  .health .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+    animation: flicker 2.4s ease-in-out infinite;
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    45% { opacity: 1; }
+    50% { opacity: 0.35; }
+    55% { opacity: 1; }
+    78% { opacity: 0.55; }
+    84% { opacity: 1; }
+  }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 96px 0 80px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; left: 50%; top: -140px; width: 720px; height: 720px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(138, 43, 226, 0.14) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero img.mark { width: 148px; height: 148px; position: relative; }
+  .hero h1 {
+    position: relative;
+    font-size: clamp(38px, 6vw, 62px);
+    font-weight: 700; letter-spacing: -0.02em; line-height: 1.08;
+    margin: 28px 0 18px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(100deg, var(--cyan) 10%, #2979FF 45%, var(--purple) 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.sub { position: relative; max-width: 640px; margin: 0 auto; color: var(--dim); font-size: 18px; }
+  .chips { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 26px 0 34px; }
+  .chip {
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+    padding: 5px 12px; border-radius: 999px;
+    background: var(--graphite); border: 1px solid var(--border); color: var(--dim);
+  }
+  .chip .ok { color: var(--success); }
+  .cta { position: relative; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .btn {
+    font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 15px;
+    padding: 12px 26px; border-radius: 999px; border: 1px solid transparent;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); }
+  .btn-active {
+    background: var(--cyan); color: #04202A;
+    box-shadow: 0 0 22px rgba(0, 229, 255, 0.45);
+  }
+  .btn-active:hover { box-shadow: 0 0 32px rgba(0, 229, 255, 0.65); }
+  .btn-idle { background: transparent; color: var(--text); border-color: #3A3A3A; }
+  .btn-idle:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ---------- terminal ---------- */
+  .terminal {
+    position: relative; max-width: 720px; margin: 56px auto 0; text-align: left;
+    background: var(--graphite-2); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden;
+  }
+  .terminal .bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+  }
+  .terminal .bar span { width: 11px; height: 11px; border-radius: 50%; background: #2E2E2E; }
+  .terminal .bar .t { margin-left: 8px; font-size: 12px; color: var(--faint); font-family: "JetBrains Mono", monospace; }
+  .terminal pre { padding: 20px 22px; font-size: 13.5px; line-height: 1.75; overflow-x: auto; }
+  .terminal .c { color: var(--faint); }           /* comment */
+  .terminal .p { color: var(--cyan); }            /* prompt/command */
+  .terminal .w { color: var(--warning); }         /* warning */
+  .terminal .s { color: var(--success); }         /* success */
+  .terminal .m { color: #C77DFF; }                /* model output (amethyst tint) */
+
+  /* ---------- sections ---------- */
+  section { padding: 72px 0; }
+  .kicker {
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--cyan); margin-bottom: 12px;
+  }
+  .kicker.purple { color: #C77DFF; }
+  h2 { font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: -0.01em; margin-bottom: 14px; }
+  .lead { color: var(--dim); max-width: 680px; margin-bottom: 40px; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { .grid.cols-3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 620px) { .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--graphite); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover { border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 0 24px rgba(0, 229, 255, 0.12); }
+  .card.think:hover { border-color: rgba(138, 43, 226, 0.65); box-shadow: 0 0 24px rgba(138, 43, 226, 0.22); }
+  .card h3 { font-size: 16.5px; font-weight: 600; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--dim); }
+  .card .icon { font-size: 20px; margin-bottom: 12px; display: block; }
+
+  pre.snippet {
+    background: var(--graphite-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; font-size: 12.8px; line-height: 1.7; overflow-x: auto; margin-top: 14px;
+  }
+  pre.snippet .p { color: var(--cyan); }
+  pre.snippet .c { color: var(--faint); }
+  pre.snippet .m { color: #C77DFF; }
+
+  /* ---------- arena ---------- */
+  .arena {
+    background: var(--graphite-2); border: 1px solid var(--border); border-radius: 14px;
+    padding: 40px; display: grid; grid-template-columns: 1fr auto 1fr; gap: 28px; align-items: center;
+  }
+  @media (max-width: 720px) { .arena { grid-template-columns: 1fr; } }
+  .arena .agent { text-align: center; }
+  .arena .agent .badge-icon {
+    width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--graphite); border: 1.5px solid var(--cyan);
+    box-shadow: 0 0 18px rgba(0, 229, 255, 0.3);
+    font-family: "JetBrains Mono", monospace; font-size: 20px; color: var(--cyan);
+  }
+  .arena .agent.critic .badge-icon {
+    border-color: var(--purple); box-shadow: 0 0 18px rgba(138, 43, 226, 0.4); color: #C77DFF;
+  }
+  .arena .agent h3 { font-size: 15px; margin-bottom: 6px; }
+  .arena .agent p { font-size: 13px; color: var(--dim); }
+  .arena .loop { text-align: center; color: #C77DFF; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+  .arena .loop svg { display: block; margin: 0 auto 10px; }
+  .arena .loop .cap { color: var(--faint); }
+
+  /* ---------- badges / tables ---------- */
+  .badge {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 500;
+    padding: 3px 10px; border-radius: 999px; vertical-align: middle;
+  }
+  .badge.local { background: rgba(0, 200, 83, 0.12); color: var(--success); border: 1px solid rgba(0, 200, 83, 0.35); }
+  .badge.cloud { background: rgba(138, 43, 226, 0.14); color: #C77DFF; border: 1px solid rgba(138, 43, 226, 0.45); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  th { font-family: "Space Grotesk", sans-serif; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+  td.mono, td code { font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .table-card { background: var(--graphite); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  .model-card { position: relative; }
+  .model-card.cloud { border-color: rgba(138, 43, 226, 0.55); box-shadow: 0 0 20px rgba(138, 43, 226, 0.18); }
+  .model-card h3 { display: flex; align-items: center; justify-content: space-between; }
+  .model-card .models { margin-top: 10px; font-size: 13px; color: var(--dim); }
+  .model-card .key { margin-top: 12px; font-size: 12px; color: var(--faint); }
+  .model-card .key code { color: var(--warning); font-size: 12px; }
+
+  /* ---------- commands ---------- */
+  .cmds { columns: 2; column-gap: 32px; }
+  @media (max-width: 720px) { .cmds { columns: 1; } }
+  .cmds .cmd {
+    break-inside: avoid; display: flex; gap: 12px; align-items: baseline;
+    padding: 9px 0; border-bottom: 1px solid #1F1F1F; font-size: 13.5px;
+  }
+  .cmds .cmd code { color: var(--cyan); white-space: nowrap; }
+  .cmds .cmd span { color: var(--dim); font-size: 13px; }
+
+  /* ---------- docs ---------- */
+  .doc-card { display: block; color: var(--text); }
+  .doc-card:hover { text-decoration: none; }
+  .doc-card h3 { color: var(--cyan); }
+  .doc-card:hover h3 { text-decoration: underline; }
+
+  /* ---------- footer ---------- */
+  footer { border-top: 1px solid var(--border); padding: 40px 0 56px; color: var(--faint); font-size: 13px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; }
+  footer a { color: var(--dim); }
+  footer a:hover { color: var(--cyan); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <img src="assets/logo.svg" alt="Any Model Plugin logo">
+      Any Model Plugin
+    </a>
+    <nav class="links">
+      <a href="#features">Features</a>
+      <a href="#surfaces">Surfaces</a>
+      <a href="#arena">Adversarial review</a>
+      <a href="#engines">Engines</a>
+      <a href="#docs">Docs</a>
+      <a href="https://github.com/pealmeida/anymodel-plugin">GitHub</a>
+      <span class="health"><span class="dot"></span>connection healthy</span>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===================== HERO ===================== -->
+  <div class="hero">
+    <div class="wrap">
+      <img class="mark" src="assets/logo.svg" alt="Universal Node Cluster logo — disparate model shapes plugging into a central orchestration core">
+      <h1>Any agent. Any provider.<br><span class="grad">Any model.</span></h1>
+      <p class="sub">
+        Delegate tasks and run adversarial reviews from any AI agent to any provider and model.
+        Any Model Plugin separates the <em>executor harness</em> from the <em>model</em> — pick the best
+        engine for the job and the best model for the task, independently.
+      </p>
+      <div class="chips">
+        <span class="chip">v0.3.1</span>
+        <span class="chip">CI <span class="ok">passing</span> · node 18 / 20 / 22</span>
+        <span class="chip">Apache-2.0</span>
+        <span class="chip">zero npm dependencies</span>
+      </div>
+      <div class="cta">
+        <a class="btn btn-active" href="https://github.com/pealmeida/anymodel-plugin#quick-start">Get started</a>
+        <a class="btn btn-idle" href="https://github.com/pealmeida/anymodel-plugin">View on GitHub</a>
+      </div>
+
+      <div class="terminal">
+        <div class="bar"><span></span><span></span><span></span><span class="t">quick start</span></div>
+<pre><span class="c"># install as a Claude Code plugin</span>
+<span class="p">git clone https://github.com/pealmeida/anymodel-plugin.git
+cd anymodel-plugin
+claude plugin marketplace add .
+claude plugin install anymodel@any-model</span>
+
+<span class="c"># set provider keys, verify, delegate your first task</span>
+<span class="p">export ZAI_API_KEY=</span>"your-key"
+<span class="p">/anymodel:setup
+/anymodel:delegate --engine direct --model zai/glm-5.2</span> "explain this architecture"</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FEATURES ===================== -->
+  <section id="features">
+    <div class="wrap">
+      <p class="kicker">Features</p>
+      <h2>Built for orchestration, not lock-in</h2>
+      <p class="lead">One core, every surface. Pure ESM on the Node standard library — clone and go.</p>
+      <div class="grid cols-3">
+        <div class="card">
+          <span class="icon">⚡</span>
+          <h3>Multi-engine delegation</h3>
+          <p>Run tasks through Codex, Claude, or the built-in <code>direct</code> agent loop — a zero-dependency floor that speaks OpenAI-compatible chat to any registry provider.</p>
+        </div>
+        <div class="card think">
+          <span class="icon">🔀</span>
+          <h3>Multi-provider routing</h3>
+          <p>Z.AI GLM, Ollama Cloud, OpenCode Go — or add your own in <code>registry.toml</code>. A built-in Responses→Chat shim with a quirk pipeline normalizes each provider's wire format.</p>
+        </div>
+        <div class="card think">
+          <span class="icon">🥊</span>
+          <h3>Adversarial reviews</h3>
+          <p>Challenge your implementation with a <em>different</em> model before shipping — the model that writes the code never grades its own homework.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🕐</span>
+          <h3>Background jobs</h3>
+          <p>Delegate long-running tasks with <code>--background</code>, then poll <code>status</code>, <code>result</code>, or <code>cancel</code> — a detached worker pattern that survives the session.</p>
+        </div>
+        <div class="card">
+          <span class="icon">🔌</span>
+          <h3>Three access surfaces</h3>
+          <p>Claude Code slash commands, a universal CLI for any shell or CI runner, and an MCP server for Cursor, Windsurf, VS Code, and Codex.</p>
+        </div>
+        <div class="card">
+          <span class="icon">📦</span>
+          <h3>Zero dependencies</h3>
+          <p>Pure ESM, Node.js standard library only. Hermetic test suite on the built-in runner — no install step, no supply chain, no network needed to test.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SURFACES ===================== -->
+  <section id="surfaces">
+    <div class="wrap">
+      <p class="kicker">Surfaces</p>
+      <h2>Same core, three ways in</h2>
+      <p class="lead">Every surface drives the same <code>companion.mjs</code> CLI, so behavior is identical wherever you call it from.</p>
+      <div class="grid cols-3">
+        <div class="card">
+          <h3>Claude Code plugin</h3>
+          <p>Eleven slash commands plus a runner subagent, installed from the marketplace.</p>
+<pre class="snippet"><span class="p">/anymodel:delegate</span> --engine codex \
+  --model zai/glm-5.2 --write \
+  <span class="m">"fix the flaky auth test"</span>
+
+<span class="p">/anymodel:review</span> --base main
+<span class="p">/anymodel:adversarial-review</span> \
+  <span class="m">"audit session handling"</span></pre>
+        </div>
+        <div class="card">
+          <h3>Universal CLI</h3>
+          <p>Any shell, agent, or CI pipeline that can spawn a process.</p>
+<pre class="snippet"><span class="c"># delegate</span>
+<span class="p">node companion.mjs delegate</span> \
+  --engine direct \
+  --model ollama/qwen3-coder \
+  <span class="m">"add tests for the parser"</span>
+
+<span class="c"># job lifecycle</span>
+<span class="p">node companion.mjs status</span></pre>
+        </div>
+        <div class="card">
+          <h3>MCP server</h3>
+          <p>Eight tools in any MCP-compatible host.</p>
+<pre class="snippet">{
+  <span class="p">"mcpServers"</span>: {
+    <span class="p">"anymodel"</span>: {
+      <span class="p">"command"</span>: <span class="m">"node"</span>,
+      <span class="p">"args"</span>: [<span class="m">"…/mcp-server.mjs"</span>]
+    }
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ARENA ===================== -->
+  <section id="arena">
+    <div class="wrap">
+      <p class="kicker purple">Adversarial Review Arena</p>
+      <h2>Consensus is observable</h2>
+      <p class="lead">
+        When models debate, opposing signals stay visible: the builder's output flows in cyan,
+        the critic's challenge in amethyst — and the loop only closes when a different model signs off.
+      </p>
+      <div class="arena">
+        <div class="agent">
+          <div class="badge-icon">&gt;_</div>
+          <h3>Builder agent</h3>
+          <p><code>delegate --engine direct --model zai/glm-5.2</code><br>proposes the implementation</p>
+        </div>
+        <div class="loop">
+          <svg width="150" height="84" viewBox="0 0 150 84" fill="none" aria-hidden="true">
+            <path d="M8 22 C 50 2, 100 2, 142 22" stroke="#8A2BE2" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 6"/>
+            <polygon points="142,22 132,16 134,28" fill="#8A2BE2"/>
+            <path d="M142 62 C 100 82, 50 82, 8 62" stroke="#8A2BE2" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 6"/>
+            <polygon points="8,62 18,56 16,68" fill="#8A2BE2"/>
+            <circle cx="75" cy="42" r="4" fill="#00E5FF"/>
+          </svg>
+          critique&nbsp;⇄&nbsp;revision<br>
+          <span class="cap">consensus loop active</span>
+        </div>
+        <div class="agent critic">
+          <div class="badge-icon">⚖</div>
+          <h3>Critic agent</h3>
+          <p><code>adversarial-review --model ollama/qwen3-coder</code><br>challenges design choices</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ENGINES & PROVIDERS ===================== -->
+  <section id="engines">
+    <div class="wrap">
+      <p class="kicker">Engines × Providers</p>
+      <h2>Two orthogonal knobs</h2>
+      <p class="lead">The harness runs on your machine. The model thinks in the cloud. Choose each on its own merits.</p>
+
+      <div class="table-card" style="margin-bottom: 28px;">
+        <table>
+          <thead>
+            <tr><th>Engine</th><th>Runs</th><th>Sandbox</th><th>Native review</th><th>Requires</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono"><code>codex</code></td>
+              <td><span class="badge local">local</span></td>
+              <td>OS-level sandbox</td>
+              <td>Yes (<code>review/start</code>)</td>
+              <td class="mono"><code>@openai/codex</code></td>
+            </tr>
+            <tr>
+              <td class="mono"><code>claude</code></td>
+              <td><span class="badge local">local</span></td>
+              <td>Permission modes</td>
+              <td>Schema fallback</td>
+              <td class="mono"><code>claude</code> CLI</td>
+            </tr>
+            <tr>
+              <td class="mono"><code>direct</code></td>
+              <td><span class="badge local">local</span></td>
+              <td>Tool whitelist</td>
+              <td>Schema fallback</td>
+              <td>Nothing — zero deps</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid cols-3">
+        <div class="card model-card cloud">
+          <h3>Z.AI <span class="badge cloud">cloud</span></h3>
+          <p class="models">GLM-5.2 · GLM-4.6</p>
+          <p class="key">env <code>ZAI_API_KEY</code> · quirks: function-tools-only, strict-tool-adjacency</p>
+        </div>
+        <div class="card model-card cloud">
+          <h3>Ollama Cloud <span class="badge cloud">cloud</span></h3>
+          <p class="models">qwen3-coder · gpt-oss · minimax</p>
+          <p class="key">env <code>OLLAMA_API_KEY</code> · no quirks needed</p>
+        </div>
+        <div class="card model-card cloud">
+          <h3>OpenCode Go <span class="badge cloud">cloud</span></h3>
+          <p class="models">glm · kimi · qwen · deepseek</p>
+          <p class="key">env <code>OPENCODE_API_KEY</code> · quirks: empty-choices-chunks</p>
+        </div>
+      </div>
+
+      <div class="terminal" style="margin-top: 28px;">
+        <div class="bar"><span></span><span></span><span></span><span class="t">anymodel status --all</span></div>
+<pre><span class="p">$ anymodel status --all</span>
+<span class="s">✓ job 7f3a2c  completed</span>   delegate   zai/glm-5.2        12s
+<span class="s">✓ job 7f39e1  completed</span>   review     ollama/qwen3-coder 41s
+<span class="w">! status: connection flaky (zai/glm-5.2) — retrying</span>
+<span class="c"># 2 active · 3 recent · bridge listening on 127.0.0.1 only</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COMMANDS ===================== -->
+  <section id="commands">
+    <div class="wrap">
+      <p class="kicker">Commands</p>
+      <h2>The full surface</h2>
+      <p class="lead">Eleven slash commands in Claude Code; the same verbs on the CLI and as MCP tools.</p>
+      <div class="cmds">
+        <div class="cmd"><code>delegate</code><span>send a task to any engine/model</span></div>
+        <div class="cmd"><code>review</code><span>code review against local git state</span></div>
+        <div class="cmd"><code>adversarial-review</code><span>challenge the approach, not the diff</span></div>
+        <div class="cmd"><code>choose</code><span>interactive action → provider → model</span></div>
+        <div class="cmd"><code>delegate-with</code><span>delegate with guided model selection</span></div>
+        <div class="cmd"><code>review-with</code><span>review with guided model selection</span></div>
+        <div class="cmd"><code>models</code><span>probe providers for available models</span></div>
+        <div class="cmd"><code>setup</code><span>check engine/provider readiness</span></div>
+        <div class="cmd"><code>status</code><span>active and recent jobs</span></div>
+        <div class="cmd"><code>result</code><span>finished job output</span></div>
+        <div class="cmd"><code>cancel</code><span>stop an active background job</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DOCS ===================== -->
+  <section id="docs">
+    <div class="wrap">
+      <p class="kicker">Documentation</p>
+      <h2>Read the manual</h2>
+      <p class="lead">Design rationale, per-host setup, contribution paths, and the security model.</p>
+      <div class="grid cols-3">
+        <a class="card doc-card" href="https://github.com/pealmeida/anymodel-plugin/blob/main/ARCHITECTURE.md">
+          <h3>Architecture →</h3>
+          <p>Engine adapter interface, provider layer, config resolution, testing strategy.</p>
+        </a>
+        <a class="card doc-card" href="https://github.com/pealmeida/anymodel-plugin/blob/main/INTEGRATIONS.md">
+          <h3>Integrations →</h3>
+          <p>Per-host setup: universal CLI, MCP server, Claude Code native plugin.</p>
+        </a>
+        <a class="card doc-card" href="https://github.com/pealmeida/anymodel-plugin/blob/main/CONTRIBUTING.md">
+          <h3>Contributing →</h3>
+          <p>Add a provider or engine, code style, hermetic testing rules.</p>
+        </a>
+        <a class="card doc-card" href="https://github.com/pealmeida/anymodel-plugin/blob/main/SECURITY.md">
+          <h3>Security →</h3>
+          <p>API-key handling, per-engine sandboxing, bridge isolation, reporting.</p>
+        </a>
+        <a class="card doc-card" href="https://github.com/pealmeida/anymodel-plugin/blob/main/CHANGELOG.md">
+          <h3>Changelog →</h3>
+          <p>Release history and notable changes, keep-a-changelog format.</p>
+        </a>
+        <a class="card doc-card" href="https://github.com/pealmeida/anymodel-plugin/releases">
+          <h3>Releases →</h3>
+          <p>Tagged versions and release notes.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap row">
+    <span>© 2026 Pedro Almeida · Apache-2.0</span>
+    <span>Derived from <a href="https://github.com/openai/codex-plugin-cc">openai/codex-plugin-cc</a> — see <a href="https://github.com/pealmeida/anymodel-plugin/blob/main/NOTICE">NOTICE</a></span>
+    <span><a href="https://github.com/pealmeida/anymodel-plugin">GitHub</a> · <a href="https://github.com/pealmeida/anymodel-plugin/issues">Issues</a> · <a href="https://github.com/pealmeida/anymodel-plugin/security/advisories/new">Report a vulnerability</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

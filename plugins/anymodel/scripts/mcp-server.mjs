@@ -7,7 +7,7 @@ import process from "node:process";
 
 const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
 const SERVER_NAME = "anymodel";
-const SERVER_VERSION = "0.3.0";
+const SERVER_VERSION = "0.3.1";
 const REQUEST_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 const __filename = fileURLToPath(import.meta.url);

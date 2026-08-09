@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Delegate tasks and reviews from Claude Code to any provider and model.",
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "plugins": [
     {
       "name": "anymodel",
       "description": "Any Model Plugin: delegation, adversarial review, and background jobs across engines and providers.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "source": "./plugins/anymodel"
     }
   ]

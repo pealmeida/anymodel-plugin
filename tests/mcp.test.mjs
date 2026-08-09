@@ -69,7 +69,7 @@ describe("mcp-server.mjs", () => {
       assert.ok(init);
       assert.ok(init.result);
       assert.strictEqual(init.result.serverInfo.name, "anymodel");
-      assert.strictEqual(init.result.serverInfo.version, "0.3.0");
+      assert.strictEqual(init.result.serverInfo.version, "0.3.1");
       assert.strictEqual(init.result.protocolVersion, "2025-06-18");
       assert.ok(init.result.capabilities.tools);
     });

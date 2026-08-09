@@ -1,6 +1,6 @@
 {
   "name": "anymodel-plugin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Delegate tasks and reviews from any AI agent to any provider and model — CLI, MCP server, and Claude Code plugin.",
   "type": "module",
   "license": "Apache-2.0",

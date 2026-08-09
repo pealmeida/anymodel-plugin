@@ -6,22 +6,27 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-08-08
+
 ### Added
+- GitHub Pages project site (`docs/`) — Dark Node themed landing page with the
+  Universal Node Cluster logo (`docs/assets/logo.svg`), served from `/docs` on `main`.
 - `CHANGELOG.md`.
 - `prepublishOnly` npm hook running the test suite before any publish.
 
-### Fixed
-- `plugins/.npmignore` blocks local env/state files (`*.env`, `*.env.runtime`, `*.log`) from
-  the published tarball — npm does not apply root `.gitignore` rules inside
-  `files`-whitelisted directories, so `.gitignore` alone was insufficient.
-
 ### Changed
-- README rewritten as a comprehensive open-source guide.
+- README redesigned with centered hero, logo, site badge, and a restructured
+  quick-start section optimized for both human users and AI agents.
 - Test suite is hermetic by default: no test makes live provider API calls unless
   `ANYMODEL_LIVE_TESTS=1` is set. MCP turn-command tests scrub provider credentials and
   assert the missing-key error path instead.
 - `npm test` runs bare `node --test` (test-runner auto-discovery; portable across shells
   and Node 18/20/22).
+
+### Fixed
+- `plugins/.npmignore` blocks local env/state files (`*.env`, `*.env.runtime`, `*.log`) from
+  the published tarball — npm does not apply root `.gitignore` rules inside
+  `files`-whitelisted directories, so `.gitignore` alone was insufficient.
 
 ### Removed
 - Codex branding and the `anymodel_` MCP tool prefix.
@@ -42,5 +47,6 @@ All notable changes to this project are documented here. The format follows
   protocol smoke test).
 - NOTICE attributing the `openai/codex-plugin-cc` fork provenance.
 
-[Unreleased]: https://github.com/pealmeida/anymodel-plugin/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/pealmeida/anymodel-plugin/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/pealmeida/anymodel-plugin/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/pealmeida/anymodel-plugin/releases/tag/v0.3.0

@@ -1,10 +1,15 @@
-# Any Model Plugin
-
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![CI](https://github.com/pealmeida/anymodel-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/pealmeida/anymodel-plugin/actions/workflows/ci.yml)
-[![Node](https://img.shields.io/badge/node-%3E%3D18.18-brightgreen)](package.json)
-
-**Delegate tasks and run adversarial reviews from any AI agent to any provider and model.**
+<div align="center">
+  <img src="docs/assets/logo.svg" alt="Any Model Plugin — Universal Node Cluster logo" width="140">
+  <h1>Any Model Plugin</h1>
+  <p><strong>Any agent. Any provider. Any model.</strong></p>
+  <p>Delegate tasks and run adversarial reviews from any AI agent to any provider and model.</p>
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
+    <a href="https://github.com/pealmeida/anymodel-plugin/actions/workflows/ci.yml"><img src="https://github.com/pealmeida/anymodel-plugin/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D18.18-brightgreen" alt="Node"></a>
+    <a href="https://pealmeida.github.io/anymodel-plugin/"><img src="https://img.shields.io/badge/site-project%20page-00E5FF" alt="Project site"></a>
+  </p>
+</div>
 
 Any Model Plugin separates the _executor harness_ (the agent runtime that plans, runs commands, and edits files) from the _model_ (the provider the harness thinks with). Pick the best engine for the job and the best model for the task — independently.
 
@@ -41,12 +46,9 @@ Any Model Plugin separates the _executor harness_ (the agent runtime that plans,
 
 ## Quick start
 
-### Prerequisites
+**Prerequisites:** Node.js ≥ 18.18 (`node --version`). No `npm install` — zero dependencies.
 
-- **Node.js ≥ 18.18** — `node --version`
-- **No `npm install` needed** — the plugin has zero npm dependencies
-
-### Install as a Claude Code plugin
+### 1 · Claude Code plugin
 
 ```bash
 git clone https://github.com/pealmeida/anymodel-plugin.git
@@ -55,7 +57,28 @@ claude plugin marketplace add .
 claude plugin install anymodel@any-model
 ```
 
-### Set up provider API keys
+### 2 · Universal CLI (no install)
+
+```bash
+node plugins/anymodel/scripts/companion.mjs setup
+```
+
+### 3 · MCP server (Cursor, Windsurf, VS Code, Codex, Claude)
+
+Add to your host's MCP config:
+
+```json
+{
+  "mcpServers": {
+    "anymodel": {
+      "command": "node",
+      "args": ["/absolute/path/to/anymodel-plugin/plugins/anymodel/scripts/mcp-server.mjs"]
+    }
+  }
+}
+```
+
+### Provider API keys
 
 ```bash
 export ZAI_API_KEY="your-key"
@@ -69,18 +92,23 @@ Or load from a file:
 export ANYMODEL_ENV_FILE="$HOME/.anymodel.env"
 ```
 
-### Verify your setup
+### Verify
 
 ```
 /anymodel:setup
 /anymodel:models
 ```
 
-### Delegate your first task
+### First delegation
 
 ```
 /anymodel:delegate --engine direct --model zai/glm-5.2 "explain the architecture of this project"
 ```
+
+> **AI agents:** every turn command accepts `--json` for machine-readable output. Use
+> `setup --json` to check readiness, `models --json` to list available models, and
+> `delegate --json` to capture results programmatically. The MCP server exposes the same
+> surface as 8 tools — see [INTEGRATIONS.md](INTEGRATIONS.md) for per-host wiring.
 
 ## Usage
 
@@ -256,6 +284,7 @@ CLI flags  >  env vars  >  <repo>/.anymodel.toml  >  ~/.config/anymodel/config.t
 | [INTEGRATIONS.md](INTEGRATIONS.md) | Per-host setup: CLI, MCP server, Claude Code native plugin |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, adding providers and engines, code style, testing |
 | [CHANGELOG.md](CHANGELOG.md) | Release history and notable changes |
+| [Project site](https://pealmeida.github.io/anymodel-plugin/) | Landing page — features, surfaces, engines, providers |
 | [SECURITY.md](SECURITY.md) | API key handling, sandboxing per engine, bridge isolation, vulnerability reporting |
 
 ## Roadmap

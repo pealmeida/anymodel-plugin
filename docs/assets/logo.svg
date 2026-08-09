@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Any Model Plugin — Universal Node Cluster logo">
+  <defs>
+    <linearGradient id="cyanStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#2979FF"/>
+    </linearGradient>
+    <linearGradient id="purpleStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8A2BE2"/>
+      <stop offset="100%" stop-color="#E040FB"/>
+    </linearGradient>
+    <linearGradient id="coreStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="55%" stop-color="#2979FF"/>
+      <stop offset="100%" stop-color="#8A2BE2"/>
+    </linearGradient>
+    <radialGradient id="orbPurple" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8A2BE2" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="#6A3DF0" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#8A2BE2" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
+    </radialGradient>
+    <style>
+      .shape { fill: none; stroke-width: 11; stroke-linejoin: round; stroke-linecap: round; }
+      .cyan   { stroke: url(#cyanStroke);   filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.5)); }
+      .purple { stroke: url(#purpleStroke); filter: drop-shadow(0 0 6px rgba(138, 43, 226, 0.55)); }
+      .core   { fill: #121218; stroke: url(#coreStroke); stroke-width: 10; stroke-linejoin: round;
+                filter: drop-shadow(0 0 8px rgba(80, 120, 255, 0.45)); }
+    </style>
+  </defs>
+
+  <!-- glowing orb behind the core -->
+  <circle cx="128" cy="112" r="60" fill="url(#orbPurple)"/>
+  <circle cx="98"  cy="128" r="48" fill="url(#orbCyan)"/>
+
+  <!-- satellite model nodes: any architecture plugs into the core -->
+  <polygon class="shape cyan"   points="70,34 101,52 101,88 70,106 39,88 39,52"/>
+  <rect class="shape purple" x="142" y="40" width="60" height="60" rx="12"/>
+  <rect class="shape cyan"   x="40"  y="142" width="60" height="60" rx="12"/>
+  <polygon class="shape purple" points="160,136 196,200 124,200"/>
+
+  <!-- central orchestration core (diamond harness) -->
+  <polygon class="core" points="120,72 168,120 120,168 72,120"/>
+</svg>
