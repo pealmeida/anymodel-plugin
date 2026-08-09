@@ -12,11 +12,11 @@
   </p>
 </div>
 
+Any Model Plugin separates the _executor harness_ (the agent runtime that plans, runs commands, and edits files) from the _model_ (the provider the harness thinks with). Pick the best engine for the job and the best model for the task — independently.
+
 <p align="center">
   <img src="docs/assets/demo.gif" alt="Terminal demo: setup, models, delegate, adversarial review, status, MCP" width="910">
 </p>
-
-Any Model Plugin separates the _executor harness_ (the agent runtime that plans, runs commands, and edits files) from the _model_ (the provider the harness thinks with). Pick the best engine for the job and the best model for the task — independently.
 
 ### Why
 
