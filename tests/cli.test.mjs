@@ -7,9 +7,19 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const COMPANION = path.resolve(__dirname, "../plugins/anymodel/scripts/companion.mjs");
 
+// The suite must be hermetic: scrub provider credentials so no test can make a
+// live API call, regardless of what the developer's environment exports.
+const CREDENTIAL_ENV_KEYS = ["ANYMODEL_ENV_FILE", "ZAI_API_KEY", "OLLAMA_API_KEY", "OPENCODE_API_KEY"];
+
+function hermeticEnv() {
+  const env = { ...process.env };
+  for (const key of CREDENTIAL_ENV_KEYS) delete env[key];
+  return env;
+}
+
 function runCompanion(args = [], env = {}) {
   return spawnSync(process.execPath, [COMPANION, ...args], {
-    env: { ...process.env, ...env },
+    env: { ...hermeticEnv(), ...env },
     encoding: "utf8",
     timeout: 10000,
   });
@@ -152,10 +162,11 @@ describe("companion.mjs CLI", () => {
   });
 
   describe("delegate", () => {
-    it("produces output (may fail without API keys)", () => {
+    it("surfaces the missing-key error without credentials", () => {
       const result = runCompanion(["delegate", "--json", "--engine", "direct", "--model", "zai/glm-5.2", "hello"]);
-      const output = result.stdout || result.stderr;
-      assert.ok(output.length > 0, "should produce some output");
+      assert.notStrictEqual(result.status, 0);
+      const output = result.stdout + result.stderr;
+      assert.ok(output.includes("ZAI_API_KEY"), "should name the required env var");
     });
 
     it("prints help with --help", () => {
@@ -166,10 +177,11 @@ describe("companion.mjs CLI", () => {
   });
 
   describe("review", () => {
-    it("produces output (may fail without API keys)", () => {
+    it("surfaces the missing-key error without credentials", () => {
       const result = runCompanion(["review", "--json", "--engine", "direct", "--model", "zai/glm-5.2"]);
-      const output = result.stdout || result.stderr;
-      assert.ok(output.length > 0, "should produce some output");
+      assert.notStrictEqual(result.status, 0);
+      const output = result.stdout + result.stderr;
+      assert.ok(output.includes("ZAI_API_KEY"), "should name the required env var");
     });
 
     it("prints help with --help", () => {
@@ -180,10 +192,11 @@ describe("companion.mjs CLI", () => {
   });
 
   describe("adversarial-review", () => {
-    it("produces output (may fail without API keys)", () => {
+    it("surfaces the missing-key error without credentials", () => {
       const result = runCompanion(["adversarial-review", "--json", "--engine", "direct", "--model", "zai/glm-5.2"]);
-      const output = result.stdout || result.stderr;
-      assert.ok(output.length > 0, "should produce some output");
+      assert.notStrictEqual(result.status, 0);
+      const output = result.stdout + result.stderr;
+      assert.ok(output.includes("ZAI_API_KEY"), "should name the required env var");
     });
 
     it("prints help with --help", () => {

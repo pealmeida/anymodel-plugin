@@ -1,0 +1,8 @@
+# Local state & secrets must never be packed. npm does not reliably apply
+# root .gitignore rules inside `files`-whitelisted directories, so this file
+# is the authoritative exclusion list for the published plugin tree.
+.env
+*.env
+*.env.runtime
+*.runtime
+*.log

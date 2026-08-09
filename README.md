@@ -255,6 +255,7 @@ CLI flags  >  env vars  >  <repo>/.anymodel.toml  >  ~/.config/anymodel/config.t
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Design rationale, engine adapter interface, provider layer, config resolution, testing strategy |
 | [INTEGRATIONS.md](INTEGRATIONS.md) | Per-host setup: CLI, MCP server, Claude Code native plugin |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, adding providers and engines, code style, testing |
+| [CHANGELOG.md](CHANGELOG.md) | Release history and notable changes |
 | [SECURITY.md](SECURITY.md) | API key handling, sandboxing per engine, bridge isolation, vulnerability reporting |
 
 ## Roadmap
@@ -274,8 +275,10 @@ Contributions are welcome. The project has zero npm dependencies and uses Node's
 ```bash
 git clone https://github.com/pealmeida/anymodel-plugin.git
 cd anymodel-plugin
-node --test tests/*.test.mjs   # 125 tests, 0 failures
+npm test   # hermetic: no API keys or network needed
 ```
+
+Live-fire tests against real providers are opt-in: `ANYMODEL_LIVE_TESTS=1 npm test` (spends tokens).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on adding providers, engines, and tests.
 

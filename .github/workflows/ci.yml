@@ -23,7 +23,7 @@ jobs:
             node --check "$f"
           done
       - name: Unit and integration tests
-        run: node --test tests/*.test.mjs
+        run: node --test
       - name: MCP protocol smoke test
         run: |
           printf '%s\n%s\n%s\n' \

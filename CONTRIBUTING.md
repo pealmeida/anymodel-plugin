@@ -72,6 +72,9 @@ Everything lives under `plugins/anymodel/`:
 
 - **Unit tests** on the built-in Node runner (`node --test tests/shim.test.mjs` or `npm test`).
   Add a test for any shim or quirk behavior change.
+- The default suite is **hermetic** — it must pass with no API keys and no network. Tests that
+  call real providers live behind `ANYMODEL_LIVE_TESTS=1` and are skipped otherwise; keep new
+  tests hermetic unless they genuinely need a live round-trip.
 - **Live smoke** via the companion CLI, with a mock provider (the `mock/echo` loopback route
   exercises the full wire path with zero keys) or a real model:
 

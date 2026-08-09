@@ -7,10 +7,25 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MCP_SERVER = path.resolve(__dirname, "../plugins/anymodel/scripts/mcp-server.mjs");
 
-function sendMCP(messages, timeoutMs = 10000) {
+// Live-fire tests that hit real provider APIs are opt-in: they spend tokens and
+// depend on network/credentials, so they only run with ANYMODEL_LIVE_TESTS=1.
+const LIVE = Boolean(process.env.ANYMODEL_LIVE_TESTS);
+const LIVE_SKIP = LIVE ? false : "set ANYMODEL_LIVE_TESTS=1 to run live provider tests";
+
+// Env vars that can inject provider credentials into the spawned server
+// (directly, or via an env file the server auto-loads at startup).
+const CREDENTIAL_ENV_KEYS = ["ANYMODEL_ENV_FILE", "ZAI_API_KEY", "OLLAMA_API_KEY", "OPENCODE_API_KEY"];
+
+function hermeticEnv() {
+  const env = { ...process.env };
+  for (const key of CREDENTIAL_ENV_KEYS) delete env[key];
+  return env;
+}
+
+function sendMCP(messages, timeoutMs = 10000, env = process.env) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [MCP_SERVER], {
-      env: process.env,
+      env,
       stdio: ["pipe", "pipe", "pipe"],
     });
 
@@ -117,7 +132,7 @@ describe("mcp-server.mjs", () => {
       const { lines } = await sendMCP([
         { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } } },
         { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "models", arguments: {} } },
-      ]);
+      ], 10000, hermeticEnv());
       const result = lines.find((m) => m.id === 2);
       assert.ok(result);
       assert.ok(result.result);
@@ -162,33 +177,74 @@ describe("mcp-server.mjs", () => {
       assert.strictEqual(result.error.code, -32602);
     });
 
-    it("calls delegate tool with prompt", async () => {
+    // Hermetic variants: credentials are scrubbed, so the direct engine fails
+    // fast on the missing-key path instead of making a live API call.
+    it("calls delegate tool with prompt (missing key surfaces as tool error)", async () => {
       const { lines } = await sendMCP([
         { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } } },
         { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "delegate", arguments: { prompt: "hello", engine: "direct", model: "zai/glm-5.2" } } },
-      ], 30000);
+      ], 10000, hermeticEnv());
       const result = lines.find((m) => m.id === 2);
       assert.ok(result);
       assert.ok(result.result);
       assert.ok(Array.isArray(result.result.content));
+      assert.strictEqual(result.result.isError, true);
+      assert.ok(result.result.content[0].text.includes("ZAI_API_KEY"));
     });
 
-    it("calls review tool", async () => {
+    it("calls review tool (missing key surfaces as tool error)", async () => {
       const { lines } = await sendMCP([
         { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } } },
         { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "review", arguments: { engine: "direct", model: "zai/glm-5.2" } } },
-      ], 30000);
+      ], 10000, hermeticEnv());
+      const result = lines.find((m) => m.id === 2);
+      assert.ok(result);
+      assert.ok(result.result);
+      assert.ok(Array.isArray(result.result.content));
+      assert.strictEqual(result.result.isError, true);
+      assert.ok(result.result.content[0].text.includes("ZAI_API_KEY"));
+    });
+
+    it("calls adversarial_review tool (missing key surfaces as tool error)", async () => {
+      const { lines } = await sendMCP([
+        { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } } },
+        { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "adversarial_review", arguments: { engine: "direct", model: "zai/glm-5.2" } } },
+      ], 10000, hermeticEnv());
+      const result = lines.find((m) => m.id === 2);
+      assert.ok(result);
+      assert.ok(result.result);
+      assert.ok(Array.isArray(result.result.content));
+      assert.strictEqual(result.result.isError, true);
+      assert.ok(result.result.content[0].text.includes("ZAI_API_KEY"));
+    });
+
+    it("live: delegate tool returns content", { skip: LIVE_SKIP }, async () => {
+      const { lines } = await sendMCP([
+        { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } } },
+        { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "delegate", arguments: { prompt: "hello", engine: "direct", model: "zai/glm-5.2" } } },
+      ], 60000);
       const result = lines.find((m) => m.id === 2);
       assert.ok(result);
       assert.ok(result.result);
       assert.ok(Array.isArray(result.result.content));
     });
 
-    it("calls adversarial_review tool", async () => {
+    it("live: review tool returns content", { skip: LIVE_SKIP }, async () => {
+      const { lines } = await sendMCP([
+        { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } } },
+        { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "review", arguments: { engine: "direct", model: "zai/glm-5.2" } } },
+      ], 60000);
+      const result = lines.find((m) => m.id === 2);
+      assert.ok(result);
+      assert.ok(result.result);
+      assert.ok(Array.isArray(result.result.content));
+    });
+
+    it("live: adversarial_review tool returns content", { skip: LIVE_SKIP }, async () => {
       const { lines } = await sendMCP([
         { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0" } } },
         { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "adversarial_review", arguments: { engine: "direct", model: "zai/glm-5.2" } } },
-      ], 30000);
+      ], 60000);
       const result = lines.find((m) => m.id === 2);
       assert.ok(result);
       assert.ok(result.result);

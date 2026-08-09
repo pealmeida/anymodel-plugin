@@ -26,14 +26,14 @@
   },
   "files": [
     "plugins/",
-    "scripts/",
     "tests/",
     "LICENSE",
     "NOTICE",
     "README.md"
   ],
   "scripts": {
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test",
+    "prepublishOnly": "npm test"
   },
   "repository": {
     "type": "git",
