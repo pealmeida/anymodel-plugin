@@ -8,10 +8,15 @@
     <a href="https://github.com/pealmeida/anymodel-plugin/actions/workflows/ci.yml"><img src="https://github.com/pealmeida/anymodel-plugin/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D18.18-brightgreen" alt="Node"></a>
     <a href="https://pealmeida.github.io/anymodel-plugin/"><img src="https://img.shields.io/badge/site-project%20page-00E5FF" alt="Project site"></a>
+    <a href="https://github.com/pealmeida/anymodel-plugin/releases"><img src="https://img.shields.io/badge/version-0.3.1-8A2BE2" alt="Version"></a>
   </p>
 </div>
 
 Any Model Plugin separates the _executor harness_ (the agent runtime that plans, runs commands, and edits files) from the _model_ (the provider the harness thinks with). Pick the best engine for the job and the best model for the task — independently.
+
+### Why
+
+**Stop being locked into one AI provider.** Most agent tools hardwire you to a single model vendor. Any Model Plugin is the **universal remote for AI agents** — delegate tasks to any engine, route through any provider, and run adversarial reviews where a _different_ model challenges the implementation before you ship. Vendor-agnostic by design, zero dependencies, one core.
 
 ---
 
@@ -47,6 +52,12 @@ Any Model Plugin separates the _executor harness_ (the agent runtime that plans,
 ## Quick start
 
 **Prerequisites:** Node.js ≥ 18.18 (`node --version`). No `npm install` — zero dependencies.
+
+**One-line install (Claude Code):**
+
+```bash
+git clone https://github.com/pealmeida/anymodel-plugin.git && cd anymodel-plugin && claude plugin marketplace add . && claude plugin install anymodel@any-model
+```
 
 ### 1 · Claude Code plugin
 
