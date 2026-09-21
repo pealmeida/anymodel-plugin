@@ -13,6 +13,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { loadRegistry, resolveModelProvider } from "../providers/registry.mjs";
+import { buildProviderHeaders } from "../providers/session.mjs";
 
 const MAX_ITERATIONS = 12;
 const USER_AGENT = "anymodel-direct";
@@ -211,13 +212,14 @@ async function runTool(cwd, toolCall, onEvent, touchedFiles) {
 }
 
 /**
+ * @param {string} providerId
  * @param {string} baseUrl
  * @param {string} apiKey
  * @param {object[]} messages
  * @param {object[]} tools
  * @returns {Promise<object>}
  */
-async function chatCompletion(baseUrl, apiKey, messages, tools) {
+async function chatCompletion(providerId, baseUrl, apiKey, messages, tools) {
   const body = {
     model: messages.modelHint,
     messages,
@@ -227,13 +229,11 @@ async function chatCompletion(baseUrl, apiKey, messages, tools) {
   };
   delete body.modelHint;
 
+  const headers = buildProviderHeaders(providerId, apiKey, { userAgent: USER_AGENT });
+
   const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "User-Agent": USER_AGENT
-    },
+    headers,
     body: JSON.stringify(body)
   });
 
@@ -315,7 +315,7 @@ const directEngine = {
 
     for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
       messages.modelHint = upstreamModel;
-      const completion = await chatCompletion(resolved.provider.base_url, apiKey, messages, tools);
+      const completion = await chatCompletion(resolved.providerId, resolved.provider.base_url, apiKey, messages, tools);
       delete messages.modelHint;
 
       const choice = completion.choices?.[0];
