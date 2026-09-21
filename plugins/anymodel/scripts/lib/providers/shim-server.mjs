@@ -10,6 +10,7 @@ import http from "node:http";
 
 import { buildChatRequest, ChatToResponsesTranslator } from "./shim.mjs";
 import { resolveModelProvider, loadRegistry } from "./registry.mjs";
+import { buildProviderHeaders } from "./session.mjs";
 
 function sendJson(res, status, body) {
   const payload = JSON.stringify(body);
@@ -126,15 +127,13 @@ async function handleResponses(req, res, { env, log }) {
   const onClose = () => controller.abort();
   req.on("close", onClose);
 
+  const headers = buildProviderHeaders(providerId, apiKey, { userAgent: "anymodel-shim", env });
+
   let upstream;
   try {
     upstream = await fetch(url, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-        "user-agent": "anymodel-shim"
-      },
+      headers,
       body: JSON.stringify(chatReq),
       signal: controller.signal
     });

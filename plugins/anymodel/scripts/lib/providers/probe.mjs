@@ -3,6 +3,7 @@
  * with no external dependencies. Used by the `anymodel diagnose` CLI command
  * to verify connectivity and list available models per provider.
  */
+import { buildProviderHeaders } from "./session.mjs";
 
 /**
  * Issue a GET with the given fetch options and an AbortController timeout.
@@ -40,14 +41,10 @@ export async function listProviderModels(providerId, provider, env = process.env
   }
 
   try {
+    const headers = buildProviderHeaders(providerId, env[provider.env_key], { userAgent: "anymodel-probe", env });
     const res = await fetchWithTimeout(
       `${provider.base_url}/models`,
-      {
-        headers: {
-          Authorization: `Bearer ${env[provider.env_key]}`,
-          "User-Agent": "anymodel-probe",
-        },
-      },
+      { headers },
       15000
     );
 
