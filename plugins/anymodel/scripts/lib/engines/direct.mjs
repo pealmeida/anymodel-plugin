@@ -212,36 +212,223 @@ async function runTool(cwd, toolCall, onEvent, touchedFiles) {
 }
 
 /**
- * @param {string} providerId
- * @param {string} baseUrl
- * @param {string} apiKey
- * @param {object[]} messages
- * @param {object[]} tools
- * @returns {Promise<object>}
+ * Chat completion against an OpenAI-compatible endpoint.
+ *
+ * The request is always sent with `stream: true` and the SSE stream is
+ * re-assembled into exactly the shape a non-streaming completion would have
+ * returned, because Node's global fetch aborts long non-streamed responses
+ * (undici header/body timeouts) with an opaque "fetch failed" error.
+ *
+ * Timeouts (both configurable via env, nothing is ever logged):
+ *   - ANYMODEL_DIRECT_TIMEOUT_MS       overall wall-clock budget  (default 20 min)
+ *   - ANYMODEL_DIRECT_IDLE_TIMEOUT_MS  max silence between chunks (default  4 min)
+ *
+ * @param {string} providerId Provider id used to shape auth/extra headers.
+ * @param {string} baseUrl Provider base URL (a trailing "/" is tolerated).
+ * @param {string} apiKey Provider secret (never logged, never echoed).
+ * @param {Array<object> & { modelHint?: string }} messages Messages plus model hint.
+ * @param {Array<object>|undefined} tools Optional tool definitions.
+ * @returns {Promise<object>} `{ choices: [{ message, finish_reason }], usage? }`.
  */
 async function chatCompletion(providerId, baseUrl, apiKey, messages, tools) {
+  const overallMs = Number(process.env.ANYMODEL_DIRECT_TIMEOUT_MS) || 1_200_000;
+  const idleMs = Number(process.env.ANYMODEL_DIRECT_IDLE_TIMEOUT_MS) || 240_000;
+
   const body = {
     model: messages.modelHint,
     messages,
     tools,
     tool_choice: "auto",
-    stream: false
+    stream: true
   };
   delete body.modelHint;
 
   const headers = buildProviderHeaders(providerId, apiKey, { userAgent: USER_AGENT });
 
-  const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  let timedOut = null;
+  let overallTimer = null;
+  let idleTimer = null;
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`HTTP ${res.status}: ${text}`);
+  const failWith = (kind, ms) => {
+    if (timedOut) return;
+    timedOut = { kind, ms };
+    controller.abort();
+  };
+
+  const bumpIdle = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => failWith("idle", idleMs), idleMs);
+    if (typeof idleTimer.unref === "function") idleTimer.unref();
+  };
+
+  try {
+    overallTimer = setTimeout(() => failWith("overall", overallMs), overallMs);
+    if (typeof overallTimer.unref === "function") overallTimer.unref();
+    bumpIdle();
+
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("application/json")) {
+      // Provider ignored `stream: true`; hand back its JSON payload untouched.
+      return await res.json();
+    }
+
+    if (!res.body) throw new Error("direct engine response had no body");
+
+    let usage = null;
+    const choices = [];
+
+    const choiceAt = (index) => {
+      while (choices.length <= index) {
+        choices.push({
+          message: { role: "assistant", content: null },
+          finish_reason: null
+        });
+      }
+      return choices[index];
+    };
+
+    const applyChunk = (chunk) => {
+      if (!chunk || typeof chunk !== "object") return;
+      if (chunk.usage) usage = chunk.usage;
+      if (!Array.isArray(chunk.choices) || chunk.choices.length === 0) return;
+
+      for (const part of chunk.choices) {
+        if (!part) continue;
+        const index = Number.isInteger(part.index) ? part.index : 0;
+        const slot = choiceAt(index);
+        const message = slot.message;
+        const delta = part.delta || {};
+
+        if (delta.role && !message.role) message.role = delta.role;
+
+        // `reasoning_content` deltas are intentionally dropped from the visible
+        // content; receiving them still counts as activity (idle timer reset).
+        if (typeof delta.content === "string" && delta.content.length > 0) {
+          message.content = (message.content || "") + delta.content;
+        }
+
+        if (Array.isArray(delta.tool_calls)) {
+          const calls = message.tool_calls || (message.tool_calls = []);
+          for (const tc of delta.tool_calls) {
+            if (!tc) continue;
+            const tcIndex = Number.isInteger(tc.index) ? tc.index : calls.length;
+            while (calls.length <= tcIndex) {
+              calls.push({ id: undefined, type: "function", function: { name: "", arguments: "" } });
+            }
+            const call = calls[tcIndex];
+            if (typeof tc.id === "string" && tc.id && !call.id) call.id = tc.id;
+            if (typeof tc.type === "string" && tc.type) call.type = tc.type;
+            const fn = tc.function || {};
+            if (typeof fn.name === "string" && fn.name && !call.function.name) call.function.name = fn.name;
+            if (typeof fn.arguments === "string") call.function.arguments += fn.arguments;
+          }
+        }
+
+        if (part.finish_reason) slot.finish_reason = part.finish_reason;
+      }
+    };
+
+    let sseDone = false;
+
+    const feedLine = (rawLine) => {
+      const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+      if (!line || line.startsWith(":")) return; // keep-alive / SSE comment
+      if (!line.startsWith("data:")) return; // event:, id:, retry: are unused here
+      const payload = line.slice(5).trim();
+      if (!payload) return;
+      if (payload === "[DONE]") {
+        sseDone = true;
+        return;
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(payload);
+      } catch {
+        return; // ignore malformed/partial frames
+      }
+      applyChunk(parsed);
+    };
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    const drain = (text) => {
+      buffer += text;
+      let nl;
+      while (!sseDone && (nl = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, nl);
+        buffer = buffer.slice(nl + 1);
+        feedLine(line);
+      }
+    };
+
+    const reader = res.body.getReader();
+    try {
+      while (!sseDone) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        bumpIdle(); // any bytes on the wire count as activity
+        if (value && value.byteLength > 0) drain(decoder.decode(value, { stream: true }));
+      }
+    } finally {
+      try {
+        await reader.cancel();
+      } catch {
+        // already closed/errored - nothing to release
+      }
+      if (typeof reader.releaseLock === "function") reader.releaseLock();
+    }
+
+    drain(decoder.decode());
+    if (!sseDone && buffer.trim()) {
+      feedLine(buffer);
+      buffer = "";
+    }
+
+    if (choices.length === 0) {
+      choices.push({ message: { role: "assistant", content: "" }, finish_reason: null });
+    }
+
+    for (const slot of choices) {
+      const message = slot.message;
+      if (!message.role) message.role = "assistant";
+      if (Array.isArray(message.tool_calls)) {
+        message.tool_calls = message.tool_calls.filter((call) => call && call.function);
+        for (const call of message.tool_calls) {
+          call.type = call.type || "function";
+          call.function.name = call.function.name || "";
+          call.function.arguments = call.function.arguments || "";
+        }
+        if (message.tool_calls.length === 0) delete message.tool_calls;
+      }
+      if (message.content === null && !message.tool_calls) message.content = "";
+    }
+
+    const result = { choices };
+    if (usage) result.usage = usage;
+    return result;
+  } catch (err) {
+    if (timedOut) {
+      throw new Error(`direct engine timeout after ${timedOut.ms} ms (${timedOut.kind})`);
+    }
+    throw err;
+  } finally {
+    if (overallTimer) clearTimeout(overallTimer);
+    if (idleTimer) clearTimeout(idleTimer);
   }
-  return res.json();
 }
 
 /** @type {Engine} */
